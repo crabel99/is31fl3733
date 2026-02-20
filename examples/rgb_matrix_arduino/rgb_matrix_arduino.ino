@@ -3,7 +3,7 @@
  * @author Cal Abel
  * @brief Demonstrates how to use the IS31FL3733RgbMatrix convenience class for high-level
  * color control with HSV, 32-bit RGB, and gamma correction on an Arduino.
- * @version 2.0.0
+ * @version 1.0.0
  * @date 2026-02-19
  *
  * @copyright Copyright 2026

@@ -4,7 +4,7 @@
  * @author Cal Abel - Updated for async driver APIs
  * @brief Demonstrates how to use the IS31FL3733 chip to enable ABM mode for all LEDs using an
  * Arduino with interrupt detection of when ABM completes.
- * @version 2.0.0
+ * @version 1.0.0
  * @date 2026-02-19
  *
  * @copyright Copyright 2021 Neil Enns, 2026 Cal Abel

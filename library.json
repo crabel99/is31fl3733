@@ -1,6 +1,6 @@
 {
   "name": "IS31Fl3733Driver",
-  "version": "3.0.0",
+  "version": "1.0.0",
   "description": "⚠️ EXPERIMENTAL: Asynchronous DMA-driven C++ class for ISSI IS31fl3733 LED matrix driver. SAMD microcontrollers only. Requires SimIOFramework async DMA branch (https://github.com/crabel99/SimIOFramework/tree/sercom-async-dma).",
   "keywords": ["IS31fl3733", "ISSI", "LED matrix", "driver", "async", "DMA", "SAMD", "C++"],
   "repository": {
