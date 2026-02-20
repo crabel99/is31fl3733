@@ -4,6 +4,7 @@ dictionaryDefinitions: []
 dictionaries: []
 words:
   - Adafruit
+  - airliftlite
   - asyncread
   - asyncwrite
   - atmega
@@ -12,9 +13,11 @@ words:
   - bargraph
   - Bitfield
   - bitfields
+  - circuitplayground
   - cmdcallback
   - configureabm
   - cpppath
+  - crickit
   - crwl
   - CSPDR
   - datasheet
@@ -32,13 +35,16 @@ words:
   - entrancy
   - espressif
   - fqbn
+  - grandcentral
   - graphviz
   - initialstatus
   - INTB
   - ipch
   - irqcallback
+  - isalnum
   - ISSI
   - Itest
+  - itsybitsy
   - jlink
   - kkostyan's
   - LEDABM
@@ -62,6 +68,8 @@ words:
   - mypy
   - nanoatmega
   - neilenns
+  - neokeytrinkey
+  - neotrinkey
   - nordicnrf
   - nullptr
   - onservicecallback
@@ -73,13 +81,20 @@ words:
   - PARAMDOC
   - PINCFG
   - PIOENV
+  - pipefail
+  - pirkey
   - Pmux
   - PMUXEN
   - projenv
   - promicro
+  - proxlighttrinkey
   - PSWL
   - PULLUP
+  - pybadge
   - pycache
+  - pygamer
+  - pyportal
+  - rotarytrinkey
   - RRGGBB
   - samd
   - selectpage
@@ -95,13 +110,17 @@ words:
   - setswpur
   - simio
   - SIMIOFRAMEWORK
+  - simiofw
+  - slidetrinkey
   - sparkfun
+  - startswith
   - ststm
   - SWPUR
   - syncread
   - syncwrite
   - Tbegin
   - TINYUSB
+  - titano
   - txns
   - UART
   - UNDOC

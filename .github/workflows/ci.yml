@@ -7,6 +7,40 @@ on:
 jobs:
   compile-examples:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        board:
+          - adafruit_blm_badge
+          - adafruit_circuitplayground_m0
+          - adafruit_crickit_m0
+          - adafruit_feather_m0
+          - adafruit_feather_m0_express
+          - adafruit_feather_m4
+          - adafruit_feather_m4_can
+          - adafruit_gemma_m0
+          - adafruit_grandcentral_m4
+          - adafruit_hallowing
+          - adafruit_hallowing_m4
+          - adafruit_itsybitsy_m0
+          - adafruit_itsybitsy_m4
+          - adafruit_metro_m0
+          - adafruit_metro_m4
+          - adafruit_metro_m4_airliftlite
+          - adafruit_monster_m4sk
+          - adafruit_neokeytrinkey_m0
+          - adafruit_neotrinkey_m0
+          - adafruit_pirkey
+          - adafruit_proxlighttrinkey_m0
+          - adafruit_pybadge_airlift_m4
+          - adafruit_pybadge_m4
+          - adafruit_pygamer_m4
+          - adafruit_pyportal_m4
+          - adafruit_pyportal_m4_titano
+          - adafruit_rotarytrinkey_m0
+          - adafruit_slidetrinkey_m0
+          - adafruit_trellis_m4
+          - adafruit_trinket_m0
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -37,62 +71,44 @@ jobs:
       - name: Compile Arduino examples (PlatformIO + SimIO framework)
         run: |
           set -euo pipefail
-
-          BUILD_BOARDS=$(python - <<'PY'
-          import sys
-          simio = set()
-          with open('/tmp/simiofw-ci/boards.txt', 'r', encoding='utf-8') as f:
-              for line in f:
-                  if line.strip().startswith('#') or '.name=' not in line:
-                      continue
-                  key = line.split('.name=', 1)[0].strip()
-                  if key and key.replace('_', '').isalnum() and key.lower() == key:
-                      simio.add(key)
-
-          import json, subprocess
-          out = subprocess.check_output(
-              ['pio', 'boards', '--json-output', 'atmelsam'],
-              text=True,
-          )
-          pio = {item['id'] for item in json.loads(out)}
-
-          common = sorted(simio & pio)
-          missing = sorted(simio - pio)
-
-          print(' '.join(common))
-          if missing:
-              print('Missing in PlatformIO atmelsam: ' + ', '.join(missing), file=sys.stderr)
-          PY
-          )
-
-          if [ -z "$BUILD_BOARDS" ]; then
-            echo "No SimIO-supported boards available in PlatformIO atmelsam."
-            exit 1
+          BOARD="${{ matrix.board }}"
+          VARIANT=$(awk -F= -v b="$BOARD" '$0 ~ "^" b "\\.build\\.variant=" {print $2; exit}' /tmp/simiofw-ci/boards.txt)
+          if [ -z "$VARIANT" ]; then
+            echo "Skipping $BOARD: missing build.variant"
+            exit 0
           fi
 
-          echo "Building examples for boards: $BUILD_BOARDS"
+          VARIANT_FILE="/tmp/simiofw-ci/variants/$VARIANT/variant.h"
+          if [ ! -f "$VARIANT_FILE" ]; then
+            echo "Skipping $BOARD: missing variant.h ($VARIANT)"
+            exit 0
+          fi
 
-          for board in $BUILD_BOARDS; do
-            echo "=== Building board: $board (abm_arduino) ==="
-            pio ci \
-              --board "$board" \
-              --lib=. \
-              --project-option=platform=atmelsam \
-              --project-option=framework=arduino \
-              --project-option=build_flags=-DUSE_TINYUSB \
-              --project-option=platform_packages=framework-arduino-samd-adafruit@symlink:///tmp/simiofw-ci \
-              examples/abm_arduino/abm_arduino.ino
+          WIRE_COUNT=$(grep -E 'WIRE_INTERFACES_COUNT' "$VARIANT_FILE" | awk '{print $3}' | head -1 || true)
+          if [ -z "$WIRE_COUNT" ] || [ "$WIRE_COUNT" -eq 0 ]; then
+            echo "Skipping $BOARD: WIRE_INTERFACES_COUNT=$WIRE_COUNT"
+            exit 0
+          fi
 
-            echo "=== Building board: $board (rgb_matrix_arduino) ==="
-            pio ci \
-              --board "$board" \
-              --lib=. \
-              --project-option=platform=atmelsam \
-              --project-option=framework=arduino \
-              --project-option=build_flags=-DUSE_TINYUSB \
-              --project-option=platform_packages=framework-arduino-samd-adafruit@symlink:///tmp/simiofw-ci \
-              examples/rgb_matrix_arduino/rgb_matrix_arduino.ino
-          done
+          echo "=== Building board: $BOARD (abm_arduino) ==="
+          pio ci \
+            --board "$BOARD" \
+            --lib=. \
+            --project-option=platform=atmelsam \
+            --project-option=framework=arduino \
+            --project-option=build_flags=-DUSE_TINYUSB \
+            --project-option=platform_packages=framework-arduino-samd-adafruit@symlink:///tmp/simiofw-ci \
+            examples/abm_arduino/abm_arduino.ino
+
+          echo "=== Building board: $BOARD (rgb_matrix_arduino) ==="
+          pio ci \
+            --board "$BOARD" \
+            --lib=. \
+            --project-option=platform=atmelsam \
+            --project-option=framework=arduino \
+            --project-option=build_flags=-DUSE_TINYUSB \
+            --project-option=platform_packages=framework-arduino-samd-adafruit@symlink:///tmp/simiofw-ci \
+            examples/rgb_matrix_arduino/rgb_matrix_arduino.ino
 
   clang-format:
     runs-on: ubuntu-latest
