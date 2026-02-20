@@ -36,7 +36,7 @@ jobs:
           path: html/
 
   deploy-pages:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: documentation
     runs-on: ubuntu-latest
     environment:
