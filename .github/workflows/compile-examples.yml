@@ -1,4 +1,4 @@
-name: CI
+name: Compile Examples
 
 on:
   push:
@@ -46,7 +46,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: "3.x"
       - name: Install PlatformIO
         run: |
           python -m pip install --upgrade pip
@@ -109,61 +109,3 @@ jobs:
             --project-option=build_flags=-DUSE_TINYUSB \
             --project-option=platform_packages=framework-arduino-samd-adafruit@symlink:///tmp/simiofw-ci \
             examples/rgb_matrix_arduino/rgb_matrix_arduino.ino
-
-  clang-format:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install clang-format
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y clang-format
-      - name: Format check
-        run: clang-format --Werror --dry-run src/*.hpp src/*.cpp
-
-  platformio-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Cache PlatformIO
-        uses: actions/cache@v4
-        with:
-          path: ~/.platformio
-          key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-
-      - name: Install PlatformIO
-        run: |
-          python -m pip install --upgrade pip
-          pip install --upgrade platformio
-
-      - name: Run PlatformIO native tests
-        run: pio test -e native -v
-  documentation:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Doxygen
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y doxygen graphviz
-      - name: Generate Doxygen documentation
-        run: doxygen Doxyfile
-      - name: Upload documentation artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: doxygen-documentation
-          path: html/

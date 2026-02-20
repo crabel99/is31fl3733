@@ -172,7 +172,7 @@ _asyncWrite(CR, &cr_value, 1, syncCallback, (void *)&syncComplete);
 while (!syncComplete);
 ```
 
-### 6. Initialization
+### 6. Initialization {#arch-initialization}
 
 ```cpp
 bool IS31FL3733Driver::begin(TwoWire &wire, uint8_t addr, ColorOrder order, uint8_t sdbPin, uint8_t irqPin)
@@ -488,7 +488,7 @@ void IS31FL3733Driver::_txnCallback(void *user, int status)
 
 ## Initialization
 
-See [Architecture Components - Initialization](#6-initialization) above for full `begin()` implementation.
+See [Architecture Components - Initialization](#arch-initialization) above for full `begin()` implementation.
 
 ## Public API (Non-blocking)
 

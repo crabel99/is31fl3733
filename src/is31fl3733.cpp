@@ -1,5 +1,7 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Cal Abel. All rights reserved.
+ *  Author: Cal Abel (async rewrite and ongoing maintenance)
+ *  Author: Neil Enns (original C++ library)
  *  Licensed under the MIT License. See LICENSE in the project root for license information.
  *
  *  Based on the original IS31FL3733 C++ library by Neil Enns

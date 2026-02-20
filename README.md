@@ -1,6 +1,18 @@
 <!-- markdownlint-disable MD036 -->
 # IS31FL3733 C++ Async Driver Library
 
+[![Compile Examples](https://github.com/neilenns/is31fl3733/actions/workflows/compile-examples.yml/badge.svg?branch=async-implementation)](https://github.com/neilenns/is31fl3733/actions/workflows/compile-examples.yml)
+[![Clang Format](https://github.com/neilenns/is31fl3733/actions/workflows/clang-format.yml/badge.svg?branch=async-implementation)](https://github.com/neilenns/is31fl3733/actions/workflows/clang-format.yml)
+[![PlatformIO Tests](https://github.com/neilenns/is31fl3733/actions/workflows/platformio-tests.yml/badge.svg?branch=async-implementation)](https://github.com/neilenns/is31fl3733/actions/workflows/platformio-tests.yml)
+[![Documentation](https://github.com/neilenns/is31fl3733/actions/workflows/documentation.yml/badge.svg?branch=async-implementation)](https://github.com/neilenns/is31fl3733/actions/workflows/documentation.yml)
+
+**CI Workflows:**
+
+- **Compile Examples**: Builds both Arduino examples across supported SimIO boards.
+- **Clang Format**: Enforces formatting on core source files.
+- **PlatformIO Tests**: Runs native unit tests.
+- **Documentation**: Builds Doxygen HTML output.
+
 This asynchronous DMA-driven IS31FL3733 LED driver for Arduino SAMD platforms features:
 
 - **Non-blocking I2C**: DMA-driven transaction queue with automatic sequencing

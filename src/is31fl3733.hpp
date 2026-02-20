@@ -1,5 +1,7 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Cal Abel. All rights reserved.
+ *  Author: Cal Abel (async rewrite and ongoing maintenance)
+ *  Author: Neil Enns (original C++ library)
  *  Licensed under the MIT License. See LICENSE in the project root for license information.
  *
  *  Based on the original IS31FL3733 C++ library by Neil Enns
@@ -263,12 +265,16 @@ struct ABMConfig {
 // IS31FL3733 Async Driver Class
 // -----------------------------------------------------------------------------------------
 
+/// @brief Asynchronous DMA-driven IS31FL3733 LED driver for SAMD SERCOM I2C.
+///
+/// Provides non-blocking I2C operations, ABM control, and RGB pixel helpers.
 class IS31FL3733 {
   public:
     // ---------------------------------------------------------------------------------------
     // Constructor / Destructor
     // ---------------------------------------------------------------------------------------
-
+    /** @name Constructor / Destructor */
+    /** @{ */
     /// @brief Construct a new IS31FL3733 driver instance.
     /// @param wire Pointer to TwoWire I2C interface.
     /// @param addr 7-bit I2C address (typically 0x50).
@@ -276,12 +282,15 @@ class IS31FL3733 {
     /// @param irqPin Optional IRQ pin for open/short detection. Use 0xFF to disable.
     IS31FL3733(TwoWire *wire, uint8_t addr = 0x50, uint8_t sdbPin = 0xFF, uint8_t irqPin = 0xFF);
 
+    /// @brief Destroy the driver; calls end() if begin() succeeded.
     ~IS31FL3733();
+    /** @} */
 
     // ---------------------------------------------------------------------------------------
     // Initialization
     // ---------------------------------------------------------------------------------------
-
+    /** @name Initialization */
+    /** @{ */
     /// @brief Initialize the device (blocking for initial config).
     /// @param pfs PWM Frequency Setting value (0..3) for initial configuration. See Table 13 for
     /// setting values. Default is 0 (slowest PWM frequency, 8.4 kHz).
@@ -296,21 +305,25 @@ class IS31FL3733 {
     /// Reads RESET register to trigger software reset, then disables device.
     /// Useful for cleanup and testing.
     void end();
+    /** @} */
 
     // ---------------------------------------------------------------------------------------
     // Device Control
     // ---------------------------------------------------------------------------------------
-
+    /** @name Device Control */
+    /** @{ */
     /// @brief Enable the device (hardware and software startup).
     void DeviceOn();
 
     /// @brief Disable the device (hardware and software shutdown).
     void DeviceOff();
+    /** @} */
 
     // ---------------------------------------------------------------------------------------
     // Runtime Configuration (Page 3/Common)
     // ---------------------------------------------------------------------------------------
-
+    /** @name Runtime Configuration (Page 3/Common) */
+    /** @{ */
     /// @brief Set global current control register (Page 3 GCC).
     /// @param gcc Global current value (0x00..0xFF).
     void SetGCC(uint8_t gcc);
@@ -331,11 +344,13 @@ class IS31FL3733 {
     /// @brief Set interrupt mask register (Common IMR).
     /// @param imrMask IMR bitmask (IMR_IO/IMR_IS/IMR_IAB/IMR_IAC).
     void SetIMR(uint8_t imrMask);
+    /** @} */
 
     // ---------------------------------------------------------------------------------------
     // PWM & ABM Control (Raw Hardware Interface)
     // ---------------------------------------------------------------------------------------
-
+    /** @name PWM & ABM Control (Raw Hardware Interface) */
+    /** @{ */
     /// @brief Set PWM duty cycle for a single LED (hardware coordinates).
     /// @param row Hardware row (1..12 = SW1..SW12).
     /// @param col Hardware column (1..16 = CS1..CS16).
@@ -363,11 +378,13 @@ class IS31FL3733 {
     /// @param col Hardware column (1..16 = CS1..CS16).
     /// @return Current cached LED mode.
     ABMMode GetPixelMode(uint8_t row, uint8_t col) const;
+    /** @} */
 
     // ---------------------------------------------------------------------------------------
     // RGB Pixel Control (Logical Coordinates with Color Order)
     // ---------------------------------------------------------------------------------------
-
+    /** @name RGB Pixel Control (Logical Coordinates with Color Order) */
+    /** @{ */
     /// @brief Set RGB color for a logical pixel (with color order mapping).
     /// @param row Logical pixel row (1..4).
     /// @param col Logical pixel column (1..16).
@@ -393,11 +410,13 @@ class IS31FL3733 {
     ColorOrder GetColorOrder() const {
         return _colorOrder;
     }
+    /** @} */
 
     // ---------------------------------------------------------------------------------------
     // Bulk Operations
     // ---------------------------------------------------------------------------------------
-
+    /** @name Bulk Operations */
+    /** @{ */
     /// @brief Fill the entire matrix with a PWM value.
     /// @param pwm PWM value (0..255).
     void Fill(uint8_t pwm = 0);
@@ -410,11 +429,13 @@ class IS31FL3733 {
     /// @param abmNum ABM selector (1..3).
     /// @param callback Invoked when selected ABM completes.
     void SetABMCallback(uint8_t abmNum, std::function<void()> callback);
+    /** @} */
 
     // ---------------------------------------------------------------------------------------
     // ABM Page 3 Control
     // ---------------------------------------------------------------------------------------
-
+    /** @name ABM Page 3 Control */
+    /** @{ */
     /// @brief Configure ABM timing/loop registers for ABM1/2/3 on Page 3.
     /// @param abmNumber ABM selector (1..3).
     /// @param config ABM timing/loop configuration fields.
@@ -435,11 +456,13 @@ class IS31FL3733 {
 
     /// @brief Latch ABM timing updates by writing TUR on Page 3.
     void TriggerABM();
+    /** @} */
 
     // ---------------------------------------------------------------------------------------
     // Fault Detection (Read-Only)
     // ---------------------------------------------------------------------------------------
-
+    /** @name Fault Detection (Read-Only) */
+    /** @{ */
     /// @brief Get the cached LED open status (from last fault detection).
     /// @return Pointer to 24-byte array (Page 0, 0x18..0x2F).
     const uint8_t *GetLEDOpen() const {
@@ -451,6 +474,7 @@ class IS31FL3733 {
     const uint8_t *GetLEDShort() const {
         return _ledShort;
     }
+    /** @} */
 
 #ifndef TEST_NATIVE
   private:
@@ -458,7 +482,8 @@ class IS31FL3733 {
     // ---------------------------------------------------------------------------------------
     // Hardware Handles
     // ---------------------------------------------------------------------------------------
-
+    /** @name Hardware Handles */
+    /** @{ */
     SERCOM *_hw;          ///< SERCOM I2C hardware interface
     uint8_t _addr;        ///< 7-bit I2C address
     uint8_t _sdbPin;      ///< SDB (shutdown) pin (0xFF = not used)
@@ -466,11 +491,13 @@ class IS31FL3733 {
     uint8_t _currentPage; ///< Tracks current page (0-3, 0xFF=unknown) to minimize page selects
 
     static IS31FL3733 *_instance; ///< Static instance pointer for ISR access
+    /** @} */
 
     // ---------------------------------------------------------------------------------------
     // PWM Matrix and Transaction State (Page 1)
     // ---------------------------------------------------------------------------------------
-
+    /** @name PWM Matrix and Transaction State (Page 1) */
+    /** @{ */
     uint8_t _pwm_matrix[kHardwareRows]
                        [kHardwareCols + 1]; ///< [row][0] = Page 1 row addr, [1..16] = PWM data
     SercomTxn _pwmTxn;                      ///< Single in-flight PWM transaction descriptor
@@ -480,10 +507,13 @@ class IS31FL3733 {
     uint16_t _pwmEnqueued; ///< Bitfield tracking enqueued rows (0x0001..0x0FFF)
 
     bool _pwmLocked; ///< True when command chain has preempted PWM
+    /** @} */
 
     // ---------------------------------------------------------------------------------------
     // Mode Matrix and Transaction State (Page 2)
     // ---------------------------------------------------------------------------------------
+    /** @name Mode Matrix and Transaction State (Page 2) */
+    /** @{ */
     uint8_t _abm_matrix[kHardwareRows]
                        [kHardwareCols + 1]; ///< [row][0] = Page 2 row addr, [1..16] = ABM data
     SercomTxn _abmTxn;                      ///< Single in-flight ABM transaction descriptor
@@ -495,20 +525,23 @@ class IS31FL3733 {
     bool _abmLocked; ///< True when command chain has preempted ABM
 
     std::function<void()> _abmCallbacks[3]; ///< Completion callbacks for ABM1/2/3
+    /** @} */
 
     // ---------------------------------------------------------------------------------------
     // Command Transaction Chain (Non-PWM Operations)
     // ---------------------------------------------------------------------------------------
-
+    /** @name Command Transaction Chain (Non-PWM Operations) */
+    /** @{ */
     SercomTxn _cmdTxn[4]; ///< [0]=unlock, [1]=page, [2]=write, [3]=read
 
+    /// @brief Context passed to SERCOM ISR callback for command-chain transactions.
     struct CmdTxnContext {
-        IS31FL3733 *self;
-        uint8_t index;
-        void (*userCallback)(void *, int);
-        void *user;
-        bool isFinal;      ///< If true, invoke userCallback on this transaction
-        int initialStatus; ///< Initial status (e.g., from first transaction)
+        IS31FL3733 *self;                  ///< Driver instance owning the transaction chain
+        uint8_t index;                     ///< Index of this transaction in the chain
+        void (*userCallback)(void *, int); ///< Optional user callback for final status
+        void *user;                        ///< User pointer passed to callback
+        bool isFinal;                      ///< If true, invoke userCallback on this transaction
+        int initialStatus;                 ///< First error status observed in the chain
     };
 
     CmdTxnContext _cmdCtx[4]; ///< Context for each command transaction (for callbacks)
@@ -520,32 +553,38 @@ class IS31FL3733 {
     volatile uint8_t _cmdReturn; ///< Bitfield of completed command transactions (bits 0..3)
     volatile uint8_t _cmdError;  ///< Bitfield of command transactions with nonzero status
 
-    volatile bool _syncComplete;
-    volatile int _syncStatus;
-    volatile int8_t _syncTargetCmd;
+    volatile bool _syncComplete;    ///< Blocking command completion flag
+    volatile int _syncStatus;       ///< Blocking command final status
+    volatile int8_t _syncTargetCmd; ///< Index of command awaited by blocking API
+    /** @} */
 
     bool _begun; ///< True after successful begin(); used for destructor auto-end safety.
 
     // ---------------------------------------------------------------------------------------
     // Fault Detection and ISR Cache
     // ---------------------------------------------------------------------------------------
-
+    /** @name Fault Detection and ISR Cache */
+    /** @{ */
     uint8_t _ledOpen[24];  ///< Cached LED open status (Page 0, 0x18)
     uint8_t _ledShort[24]; ///< Cached LED short status (Page 0, 0x30)
     uint8_t _ledOn[24];    ///< Computed LED On/Off mask (Page 0, 0x00)
     uint8_t _lastISR;      ///< Cached ISR value from last fault detection
+    /** @} */
 
     // ---------------------------------------------------------------------------------------
     // Configuration
     // ---------------------------------------------------------------------------------------
-
+    /** @name Configuration */
+    /** @{ */
     uint8_t _crValue;       ///< Shadow of CR register state for runtime updates
     ColorOrder _colorOrder; ///< RGB pixel color order
+    /** @} */
 
     // ---------------------------------------------------------------------------------------
     // Private Methods (Transaction Management)
     // ---------------------------------------------------------------------------------------
-
+    /** @name Private Methods (Transaction Management) */
+    /** @{ */
     /// @brief Dequeue and transmit next pending PWM row.
     inline void _sendRowPWM();
 
@@ -573,11 +612,13 @@ class IS31FL3733 {
 
     /// @brief Blocking read helper used by begin() setup flow.
     bool _syncRead(uint16_t pagereg, uint8_t *dest, uint8_t len);
+    /** @} */
 
     // ---------------------------------------------------------------------------------------
     // Static Callbacks
     // ---------------------------------------------------------------------------------------
-
+    /** @name Static Callbacks */
+    /** @{ */
     /// @brief PWM row transaction callback, enqueues the next pending row if any.
     /// @param user Pointer to IS31FL3733 instance.
     /// @param status Transaction status (0 = success).
@@ -605,9 +646,13 @@ class IS31FL3733 {
     static void _osbCallback(void *user, int status);
 
     /// @brief Static wrappers for ABM completion callback dispatch (PendSV-safe entry points).
+    /// @brief Dispatch ABM1 completion callback on a safe context.
     static void _abm1CallbackWrapper();
+    /// @brief Dispatch ABM2 completion callback on a safe context.
     static void _abm2CallbackWrapper();
+    /// @brief Dispatch ABM3 completion callback on a safe context.
     static void _abm3CallbackWrapper();
+    /** @} */
 };
 
 // =========================================================================================

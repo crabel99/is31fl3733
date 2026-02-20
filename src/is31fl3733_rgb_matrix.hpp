@@ -20,28 +20,51 @@ namespace IS31FL3733 {
 /// and adds higher-level color helpers for 32-bit packed RGB and HSV.
 class IS31FL3733RgbMatrix : public IS31FL3733 {
   public:
+    /** @name Constants */
+    /** @{ */
+    /// @brief Logical RGB matrix row count.
     static constexpr uint8_t kRows = 4;
+    /// @brief Logical RGB matrix column count.
     static constexpr uint8_t kCols = 16;
+    /** @} */
 
+    /** @name Constructor */
+    /** @{ */
     /// @brief Construct RGB matrix helper with same arguments as base driver.
+    /// @param wire Pointer to TwoWire I2C interface.
+    /// @param addr 7-bit I2C address (typically 0x50).
+    /// @param sdbPin Optional SDB (shutdown) pin (active high). Use 0xFF to disable.
+    /// @param irqPin Optional IRQ pin for open/short detection. Use 0xFF to disable.
     /// @param order Initial logical RGB channel order.
     IS31FL3733RgbMatrix(TwoWire *wire, uint8_t addr = 0x50, uint8_t sdbPin = 0xFF,
                         uint8_t irqPin = 0xFF, ColorOrder order = ColorOrder::GRB)
         : IS31FL3733(wire, addr, sdbPin, irqPin) {
         SetColorOrder(order);
     }
+    /** @} */
 
     using IS31FL3733::GetColorOrder;
     using IS31FL3733::SetColorOrder;
 
+    /** @name Validation Helpers */
+    /** @{ */
+    /// @brief Validate a logical RGB row index.
+    /// @param row Logical row (1..kRows).
+    /// @return True if row is in range.
     static bool IsValidRow(uint8_t row) {
         return row >= 1 && row <= kRows;
     }
 
+    /// @brief Validate a logical RGB column index.
+    /// @param col Logical column (1..kCols).
+    /// @return True if column is in range.
     static bool IsValidCol(uint8_t col) {
         return col >= 1 && col <= kCols;
     }
+    /** @} */
 
+    /** @name Color Helpers */
+    /** @{ */
     /// @brief Set a logical RGB pixel from packed 0xRRGGBB value.
     /// @param row Logical row (1..4).
     /// @param col Logical column (1..16).
@@ -94,5 +117,6 @@ class IS31FL3733RgbMatrix : public IS31FL3733 {
         const uint32_t color = ColorUtils::ColorHSV(hue, sat, val);
         FillColor32(color, gamma);
     }
+    /** @} */
 };
 } // namespace IS31FL3733
