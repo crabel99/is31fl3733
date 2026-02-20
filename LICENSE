@@ -1,6 +1,7 @@
 MIT License
 
 Copyright (c) 2021 Neil Enns
+Copyright (c) 2026 Cal Abel
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +20,13 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+## Components Under Different Licenses
+
+**Color Utilities** (`src/is31fl3733_color_utils.hpp`):
+
+- Derived from Adafruit NeoPixel library
+- Licensed under LGPL-3.0
+- See: https://github.com/adafruit/Adafruit_NeoPixel

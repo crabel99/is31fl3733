@@ -1,0 +1,111 @@
+name: Compile Examples
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  compile-examples:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        board:
+          - adafruit_blm_badge
+          - adafruit_circuitplayground_m0
+          - adafruit_crickit_m0
+          - adafruit_feather_m0
+          - adafruit_feather_m0_express
+          - adafruit_feather_m4
+          - adafruit_feather_m4_can
+          - adafruit_gemma_m0
+          - adafruit_grandcentral_m4
+          - adafruit_hallowing
+          - adafruit_hallowing_m4
+          - adafruit_itsybitsy_m0
+          - adafruit_itsybitsy_m4
+          - adafruit_metro_m0
+          - adafruit_metro_m4
+          - adafruit_metro_m4_airliftlite
+          - adafruit_monster_m4sk
+          - adafruit_neokeytrinkey_m0
+          - adafruit_neotrinkey_m0
+          - adafruit_pirkey
+          - adafruit_proxlighttrinkey_m0
+          - adafruit_pybadge_airlift_m4
+          - adafruit_pybadge_m4
+          - adafruit_pygamer_m4
+          - adafruit_pyportal_m4
+          - adafruit_pyportal_m4_titano
+          - adafruit_rotarytrinkey_m0
+          - adafruit_slidetrinkey_m0
+          - adafruit_trellis_m4
+          - adafruit_trinket_m0
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Install PlatformIO
+        run: |
+          python -m pip install --upgrade pip
+          pip install --upgrade platformio
+      - name: Prepare SimIO framework package (sercom-async-dma)
+        run: |
+          rm -rf /tmp/simiofw-ci
+          git clone --depth 1 --branch sercom-async-dma --recurse-submodules https://github.com/crabel99/SimIOFramework /tmp/simiofw-ci
+          git -C /tmp/simiofw-ci submodule update --init --recursive
+          cat > /tmp/simiofw-ci/package.json <<'EOF'
+          {
+            "name": "framework-arduino-samd-adafruit",
+            "version": "1.0.0",
+            "description": "SimIO Arduino SAMD framework with async SERCOM DMA extensions",
+            "keywords": ["framework", "arduino", "samd", "simio"],
+            "homepage": "https://github.com/crabel99/SimIOFramework",
+            "license": "LGPL-2.1-or-later",
+            "system": ["linux_x86_64"],
+            "platforms": ["atmelsam"]
+          }
+          EOF
+      - name: Compile Arduino examples (PlatformIO + SimIO framework)
+        run: |
+          set -euo pipefail
+          BOARD="${{ matrix.board }}"
+          VARIANT=$(awk -F= -v b="$BOARD" '$0 ~ "^" b "\\.build\\.variant=" {print $2; exit}' /tmp/simiofw-ci/boards.txt)
+          if [ -z "$VARIANT" ]; then
+            echo "Skipping $BOARD: missing build.variant"
+            exit 0
+          fi
+
+          VARIANT_FILE="/tmp/simiofw-ci/variants/$VARIANT/variant.h"
+          if [ ! -f "$VARIANT_FILE" ]; then
+            echo "Skipping $BOARD: missing variant.h ($VARIANT)"
+            exit 0
+          fi
+
+          WIRE_COUNT=$(grep -E 'WIRE_INTERFACES_COUNT' "$VARIANT_FILE" | awk '{print $3}' | head -1 || true)
+          if [ -z "$WIRE_COUNT" ] || [ "$WIRE_COUNT" -eq 0 ]; then
+            echo "Skipping $BOARD: WIRE_INTERFACES_COUNT=$WIRE_COUNT"
+            exit 0
+          fi
+
+          echo "=== Building board: $BOARD (abm_arduino) ==="
+          pio ci \
+            --board "$BOARD" \
+            --lib=. \
+            --project-option=platform=atmelsam \
+            --project-option=framework=arduino \
+            --project-option=build_flags=-DUSE_TINYUSB \
+            --project-option=platform_packages=framework-arduino-samd-adafruit@symlink:///tmp/simiofw-ci \
+            examples/abm_arduino/abm_arduino.ino
+
+          echo "=== Building board: $BOARD (rgb_matrix_arduino) ==="
+          pio ci \
+            --board "$BOARD" \
+            --lib=. \
+            --project-option=platform=atmelsam \
+            --project-option=framework=arduino \
+            --project-option=build_flags=-DUSE_TINYUSB \
+            --project-option=platform_packages=framework-arduino-samd-adafruit@symlink:///tmp/simiofw-ci \
+            examples/rgb_matrix_arduino/rgb_matrix_arduino.ino

@@ -1,25 +1,28 @@
 {
   "name": "IS31Fl3733Driver",
-  "version": "2.0.0",
-  "description": "Provides a C++ class to control the ISSI IS31fl3733 12x16 LED matrix driver chip. Based on the original C library by kkostyan.",
-  "keywords": "IS31fl3733, ISSI, LED matrix",
+  "version": "3.0.0",
+  "description": "⚠️ EXPERIMENTAL: Asynchronous DMA-driven C++ class for ISSI IS31fl3733 LED matrix driver. SAMD microcontrollers only. Requires SimIOFramework async DMA branch (https://github.com/crabel99/SimIOFramework/tree/sercom-async-dma).",
+  "keywords": ["IS31fl3733", "ISSI", "LED matrix", "driver", "async", "DMA", "SAMD", "C++"],
   "repository": {
     "type": "git",
-    "url": "https://github.com/neilenns/is31fl3733"
+    "url": "https://github.com/crabel99/is31fl3733"
   },
   "authors": [
     {
-      "name": "Neil Enns",
-      "email": "neile@live.com",
-      "url": "https://www.linkedin.com/in/neilenns/",
+      "name": "Cal Abel",
+      "email": "crabel@signalpowerandlight.com",
+      "url": "https://www.linkedin.com/in/cal-abel-74140022/",
       "maintainer": true
     }
   ],
   "license": "MIT",
-  "homepage": "https://github.com/neilenns/is31fl3773",
-  "frameworks": "*",
-  "platforms": "*",
+  "homepage": "https://github.com/crabel99/is31fl3733",
+  "build": {
+    "includeDir": "src"
+  },
+  "frameworks": "arduino",
+  "platforms": ["atmelsam"],
   "export": {
-    "include": ["src/is31fl3733.cpp", "include/is31fl3733.hpp", "examples/*"]
+    "include": ["src/*", "examples/*"]
   }
 }

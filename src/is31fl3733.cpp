@@ -1,386 +1,761 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) Neil Enns. All rights reserved.
+ *  Copyright (c) Cal Abel. All rights reserved.
+ *  Author: Cal Abel (async rewrite and ongoing maintenance)
+ *  Author: Neil Enns (original C++ library)
  *  Licensed under the MIT License. See LICENSE in the project root for license information.
+ *
+ *  Based on the original IS31FL3733 C++ library by Neil Enns
+ *  (https://github.com/neilenns/is31fl3733).
+ *  This is a nearly complete rewrite for asynchronous DMA-driven operation on
+ *  Arduino SAMD.
+ *
+ *  Asynchronous DMA-driven IS31FL3733 driver implementation.
+ *
+ *  See is31fl3733_async.hpp and /docs/ASYNC_DMA_ARCHITECTURE.md for details.
  *--------------------------------------------------------------------------------------------*/
+
 #include "is31fl3733.hpp"
 
-namespace IS31FL3733
-{
-  IS31FL3733Driver::IS31FL3733Driver(const ADDR addr1, const ADDR addr2, const i2c_read_function read_function, const i2c_write_function write_function)
-  {
-#ifdef ARDUINO
-    // Arduino uses 7 bit I2C addresses without the R/W bit in position 0.
-    address = ((I2C_BASE_ADDR) | ((addr2) << 3) | ((addr1) << 1)) >> 1;
-
-    // Arduino's Wire.write() function is limited to 32 bytes in one go.
-    // This is set to 31 because one of the bytes gets consumed by the register address
-    // getting written to.
-    maxI2CWriteBufferSize = 31;
-#else
-    address = ((I2C_BASE_ADDR) | ((addr2) << 3) | ((addr1) << 1));
-
-    // For all other platforms assume it is possible to write a full page at once.
-    maxI2CWriteBufferSize = LED_COUNT;
-#endif
-
-    i2c_read_reg = read_function;
-    i2c_write_reg = write_function;
-  }
-
-  void IS31FL3733Driver::_setLEDState(const uint8_t offset, const uint8_t cs, const LED_STATE state)
-  {
-    // Update state of LED in internal buffer.
-    if (state == LED_STATE::OFF)
-    {
-      // Clear bit for selected LED.
-      leds[offset] &= ~(0x01 << (cs % 8));
-    }
-    else
-    {
-      // Set bit for selected LED.
-      leds[offset] |= 0x01 << (cs % 8);
-    }
-  }
-
-  void IS31FL3733Driver::_setColumnPagedRegister(const PAGEDREGISTER reg, const uint8_t cs, uint8_t value)
-  {
-    uint8_t offset;
-
-    // Write all the bytes in the specified column.
-    for (uint8_t row = 0; row < SW_LINES; row++)
-    {
-      offset = row * CS_LINES + cs;
-
-      WritePagedReg(reg, offset, value);
-    }
-  }
-
-  void IS31FL3733Driver::_setFullPagedRegister(const PAGEDREGISTER reg, uint8_t value)
-  {
-    // On Arduino the maximum buffer size for an I2C write is 32 bytes so this is
-    // really wasting RAM on the Arduino. Ideally on Arduino this would only be 32
-    // bytes and would get sent repeatedly until LED_COUNT's worth of bytes are sent.
-    // The downside to that approach is this code is no longer portable across
-    // platforms. So instead this is the full amount of bytes that have to get sent
-    // and splitting it into appropriate chunks is left to WritePagedRegs().
-    uint8_t values[LED_COUNT];
-
-    memset(values, value, LED_COUNT * sizeof(values[0]));
-
-    WritePagedRegs(reg, values, LED_COUNT);
-  }
-
-  void IS31FL3733Driver::_setRowPagedRegister(const PAGEDREGISTER reg, const uint8_t sw, uint8_t value)
-  {
-    uint8_t values[CS_LINES];
-
-    memset(values, value, CS_LINES * sizeof(values[0]));
-
-    WritePagedRegs(reg, sw * CS_LINES, values, CS_LINES);
-  }
-
-  uint8_t IS31FL3733Driver::ReadCommonReg(const COMMONREGISTER reg)
-  {
-    uint8_t reg_value;
-
-    i2c_read_reg(address, reg, &reg_value, sizeof(reg_value));
-
-    return reg_value;
-  }
-
-  void IS31FL3733Driver::WriteCommonReg(const COMMONREGISTER reg, const uint8_t reg_value)
-  {
-    // Write value to register.
-    i2c_write_reg(address, reg, &reg_value, sizeof(reg_value));
-  }
-
-  void IS31FL3733Driver::SelectPageForRegister(const PAGEDREGISTER reg)
-  {
-    // Unlock Command Register.
-    WriteCommonReg(COMMONREGISTER::PSWL, PSWL_OPTIONS::PSWL_ENABLE);
-
-    // Select requested page in Command Register. The requested page is the
-    // high byte of reg.
-    WriteCommonReg(COMMONREGISTER::PSR, (uint8_t)(reg >> 8));
-  }
-
-  uint8_t IS31FL3733Driver::ReadPagedReg(const PAGEDREGISTER reg)
-  {
-    return ReadPagedReg(reg, 0);
-  }
-
-  uint8_t IS31FL3733Driver::ReadPagedReg(const PAGEDREGISTER reg, const uint8_t offset)
-  {
-    uint8_t reg_value;
-
-    // Select register page.
-    SelectPageForRegister(reg);
-
-    // Read value from register. The register address is the low eight bits of the reg parameter.
-    i2c_read_reg(address, (uint8_t)(reg) + offset, &reg_value, sizeof(reg_value));
-
-    return reg_value;
-  }
-
-  void IS31FL3733Driver::WritePagedReg(const PAGEDREGISTER reg, const uint8_t reg_value)
-  {
-    WritePagedReg(reg, 0, reg_value);
-  }
-
-  void IS31FL3733Driver::WritePagedReg(const PAGEDREGISTER reg, const uint8_t offset, const uint8_t reg_value)
-  {
-    // Select register page.
-    SelectPageForRegister(reg);
-
-    // Write value to register. The register address is the low eight bits of the reg parameter.
-    i2c_write_reg(address, (uint8_t)(reg) + offset, &reg_value, sizeof(reg_value));
-  }
-
-  void IS31FL3733Driver::WritePagedRegs(const PAGEDREGISTER reg, const uint8_t *values, const uint8_t count)
-  {
-    WritePagedRegs(reg, 0, values, count);
-  }
-
-  void IS31FL3733Driver::WritePagedRegs(const PAGEDREGISTER reg, const uint8_t offset, const uint8_t *values, const uint8_t count)
-  {
-    uint8_t bytesRemaining = count;
-    uint8_t bytesToWrite = maxI2CWriteBufferSize;
-    uint8_t bytesWritten = 0;
-
-    // Depending on the platform it may not be possible to send the entire list of values at once.
-    while (bytesRemaining > 0)
-    {
-      if (bytesRemaining < maxI2CWriteBufferSize)
-      {
-        bytesToWrite = bytesRemaining;
-      }
-
-      // Select register page.
-      SelectPageForRegister(reg);
-
-      // Write values to registers. The register is the low eight bits of the reg parameter.
-      i2c_write_reg(address, (uint8_t)(reg) + offset + bytesWritten, &values[bytesWritten], bytesToWrite);
-
-      bytesRemaining -= bytesToWrite;
-      bytesWritten += bytesToWrite;
-    }
-  }
-
-  void IS31FL3733Driver::Init()
-  {
-    // Read reset register to reset device.
-    ReadPagedReg(PAGEDREGISTER::RESET);
-
-    // Clear software reset in configuration register.
-    WritePagedReg(PAGEDREGISTER::CR, CR_OPTIONS::CR_SSD);
-
-    // Clear state of all LEDs in internal buffer and sync buffer to device.
-    SetLEDMatrixState(LED_STATE::OFF);
-  }
-
-  byte IS31FL3733Driver::GetI2CAddress()
-  {
-    return address;
-  }
-
-  void IS31FL3733Driver::SetGCC(const uint8_t gcc)
-  {
-    WritePagedReg(PAGEDREGISTER::GCC, gcc);
-  }
-
-  void IS31FL3733Driver::SetSWPUR(const RESISTOR resistor)
-  {
-    WritePagedReg(PAGEDREGISTER::SWPUR, resistor);
-  }
-
-  void IS31FL3733Driver::SetCSPDR(const RESISTOR resistor)
-  {
-    WritePagedReg(PAGEDREGISTER::CSPDR, resistor);
-  }
-
-  void IS31FL3733Driver::SetLEDSingleState(const uint8_t cs, uint8_t sw, const LED_STATE state)
-  {
-    uint8_t offset;
-
-    // Calculate LED bit offset.
-    offset = (sw << 1) + (cs / 8);
-
-    _setLEDState(offset, cs, state);
-
-    WritePagedReg(PAGEDREGISTER::LEDONOFF, offset, leds[offset]);
-  }
-
-  void IS31FL3733Driver::SetLEDRowState(const uint8_t sw, const LED_STATE state)
-  {
-    // Shifting sw over by one bit is necessary since each row is two bytes in length.
-    // This effectively mutliplies the requested row by two to get the correct offset.
-    const uint8_t offset = sw << 1;
-
-    // The LED page is two bytes per row with each bit in the bytes controlling one of the
-    // sixteen column positions. See table 6 in the datasheet for a visual of this layout.
-    if (state == LED_STATE::OFF)
-    {
-      memset(&leds[offset], 0x00, sizeof(leds[0]) * 2);
-    }
-    else
-    {
-      memset(&leds[offset], 0xFF, sizeof(leds[0]) * 2);
-    }
-
-    // Write updated LEDs state to device register.
-    WritePagedRegs(PAGEDREGISTER::LEDONOFF, offset, &leds[offset], CS_LINES / 8);
-  }
-
-  void IS31FL3733Driver::SetLEDColumnState(const uint8_t cs, const LED_STATE state)
-  {
-    uint8_t offset;
-
-    // Set state of full column selected by CS.
-    for (uint8_t row = 0; row < SW_LINES; row++)
-    {
-      // Calculate LED bit offset.
-      offset = (row << 1) + (cs / 8);
-
-      _setLEDState(offset, cs, state);
-
-      WritePagedReg(PAGEDREGISTER::LEDONOFF, offset, leds[offset]);
-    }
-  }
-
-  void IS31FL3733Driver::SetLEDMatrixState(const LED_STATE state)
-  {
-    // Update state of all LEDs in internal buffer. Since each byte covers eight LEDs
-    // the total amount of memory to fill and then write is the LED_COUNT divided by eight.
-    if (state == LED_STATE::OFF)
-    {
-      memset(leds, 0x00, LED_COUNT / 8);
-    }
-    else
-    {
-      memset(leds, 0xFF, LED_COUNT / 8);
-    }
-
-    WritePagedRegs(PAGEDREGISTER::LEDONOFF, leds, LED_COUNT / 8);
-  }
-
-  void IS31FL3733Driver::SetLEDSinglePWM(uint8_t cs, uint8_t sw, const uint8_t value)
-  {
-    // Write LED PWM value to device register.
-    WritePagedReg(PAGEDREGISTER::LEDPWM, sw * CS_LINES + cs, value);
-  }
-
-  void IS31FL3733Driver::SetLEDRowPWM(uint8_t sw, const uint8_t value)
-  {
-    _setRowPagedRegister(PAGEDREGISTER::LEDPWM, sw, value);
-  }
-
-  void IS31FL3733Driver::SetLEDColumnPWM(uint8_t cs, const uint8_t value)
-  {
-    _setColumnPagedRegister(PAGEDREGISTER::LEDPWM, cs, value);
-  }
-
-  void IS31FL3733Driver::SetLEDMatrixPWM(const uint8_t value)
-  {
-    _setFullPagedRegister(PAGEDREGISTER::LEDPWM, value);
-  }
-
-  LED_STATUS IS31FL3733Driver::GetLEDStatus(uint8_t cs, uint8_t sw)
-  {
-    uint8_t offset;
-
-    // Out of bounds values result in a status of UNKNOWN.
-    if ((cs >= CS_LINES) || (sw >= SW_LINES))
-    {
-      return LED_STATUS::UNKNOWN;
-    }
-
-    // Calculate LED bit offset.
-    offset = (sw << 1) + (cs / 8);
-
-    // Get Open status from device register.
-    if (ReadPagedReg(PAGEDREGISTER::LEDOPEN, offset) & (0x01 << (cs % 8)))
-    {
-      return LED_STATUS::OPEN;
-    }
-
-    // Get Short status from device register.
-    if (ReadPagedReg(PAGEDREGISTER::LEDSHORT, offset) & (0x01 << (cs % 8)))
-    {
-      return LED_STATUS::SHORT;
-    }
-
-    // No reported shorts or open connections so it must be normal.
-    return LED_STATUS::NORMAL;
-  }
-
-  void IS31FL3733Driver::SetState(const LED_STATE *states)
-  {
-    uint8_t offset;
-
-    // Set state of all LEDs.
-    for (uint8_t sw = 0; sw < SW_LINES; sw++)
-    {
-      for (uint8_t cs = 0; cs < CS_LINES; cs++)
-      {
-        // Calculate LED bit offset.
-        offset = (sw << 1) + (cs / 8);
-
-        _setLEDState(offset, cs, states[sw * CS_LINES + cs]);
-      }
-    }
-
-    WritePagedRegs(PAGEDREGISTER::LEDONOFF, leds, SW_LINES * CS_LINES / 8);
-  }
-
-  void IS31FL3733Driver::SetPWM(const uint8_t *values)
-  {
-    WritePagedRegs(PAGEDREGISTER::LEDPWM, values, SW_LINES * CS_LINES);
-  }
-
-  void IS31FL3733Driver::SetLEDSingleMode(uint8_t cs, uint8_t sw, const LED_MODE mode)
-  {
-    WritePagedReg(PAGEDREGISTER::LEDABM, sw * CS_LINES + cs, mode);
-  }
-
-  void IS31FL3733Driver::SetLEDRowMode(const uint8_t sw, const LED_MODE mode)
-  {
-    _setRowPagedRegister(PAGEDREGISTER::LEDABM, sw, mode);
-  }
-
-  void IS31FL3733Driver::SetLEDColumnMode(uint8_t cs, const LED_MODE mode)
-  {
-    _setColumnPagedRegister(PAGEDREGISTER::LEDABM, cs, mode);
-  }
-
-  void IS31FL3733Driver::SetLEDMatrixMode(const LED_MODE mode)
-  {
-    _setFullPagedRegister(PAGEDREGISTER::LEDABM, mode);
-  }
-
-  void IS31FL3733Driver::ConfigABM(const ABM_NUM n, const ABM_CONFIG *config)
-  {
-    // Set fade in and fade out time.
-    WritePagedReg((PAGEDREGISTER)n, config->T1 | config->T2);
-
-    // Set hold and off time.
-    WritePagedReg((PAGEDREGISTER)n, 1, config->T3 | config->T4);
-
-    // Set loop begin/end time and high part of loop times.
-    WritePagedReg((PAGEDREGISTER)n, 2, config->Tend | config->Tbegin | ((config->Times >> 8) & 0x0F));
-
-    // Set low part of loop times.
-    WritePagedReg((PAGEDREGISTER)n, 3, config->Times & 0xFF);
-  }
-
-  void IS31FL3733Driver::StartABM()
-  {
-    // Clear B_EN bit in configuration register.
-    WritePagedReg(PAGEDREGISTER::CR, CR_OPTIONS::CR_SSD);
-
-    // Set B_EN bit in configuration register.
-    WritePagedReg(PAGEDREGISTER::CR, CR_OPTIONS::CR_BEN | CR_OPTIONS::CR_SSD);
-
-    // Write 0x00 to Time Update Register to update ABM settings.
-    WritePagedReg(PAGEDREGISTER::TUR, 0x00);
-  }
+#include <utility>
+
+namespace IS31FL3733 {
+
+// =========================================================================================
+// Static Members
+// =========================================================================================
+
+IS31FL3733 *IS31FL3733::_instance = nullptr;
+
+// =========================================================================================
+// Constructor
+// =========================================================================================
+
+IS31FL3733::IS31FL3733(TwoWire *wire, uint8_t addr, uint8_t sdbPin, uint8_t irqPin)
+    : _hw(wire ? wire->getSercom() : nullptr), _addr(addr), _sdbPin(sdbPin), _irqPin(irqPin),
+      _currentPage(0xFF), _pwmEnqueued(0), _pwmLocked(false), _abmEnqueued(0), _abmLocked(false),
+      _cmdReturn(0), _cmdError(0), _syncComplete(false), _syncStatus(0), _syncTargetCmd(-1),
+      _begun(false), _lastISR(0), _crValue(CR_SSD), _colorOrder(ColorOrder::GRB) {
+
+    // Pre-stage unlock transaction and page buffers
+    _crwlTx[0] = PSWL;
+    _crwlTx[1] = PSWL_ENABLE;
+    _pgSelTx[0] = PSR;
+    // _pgSelTx[1] will be set dynamically based on target register page during transactions
+
+    // CRWL Txn (unlock)
+    _cmdTxn[0].config = I2C_CFG_STOP;
+    _cmdTxn[0].address = _addr;
+    _cmdTxn[0].txPtr = _crwlTx;
+    _cmdTxn[0].length = 2;
+    _cmdCtx[0] = {this, 0, nullptr, nullptr};
+    _cmdTxn[0].onComplete = _cmdCallback;
+    _cmdTxn[0].user = &_cmdCtx[0];
+
+    // Page Selection Txn
+    _cmdTxn[1].config = I2C_CFG_STOP;
+    _cmdTxn[1].address = _addr;
+    _cmdTxn[1].txPtr = _pgSelTx;
+    _cmdTxn[1].length = 2;
+    _cmdCtx[1] = {this, 1, nullptr, nullptr};
+    _cmdTxn[1].onComplete = _cmdCallback;
+    _cmdTxn[1].user = &_cmdCtx[1];
+
+    // Command Write Txn
+    _cmdTxn[2].config = I2C_CFG_STOP;
+    _cmdTxn[2].address = _addr;
+    _cmdTxn[2].txPtr = _cmdTx;
+    _cmdCtx[2] = {this, 2, nullptr, nullptr};
+    _cmdTxn[2].onComplete = _cmdCallback;
+    _cmdTxn[2].user = &_cmdCtx[2];
+
+    // Command Read Txn
+    _cmdTxn[3].config = I2C_CFG_READ | I2C_CFG_STOP;
+    _cmdTxn[3].address = _addr;
+    _cmdTxn[3].rxPtr = _cmdRx;
+    _cmdCtx[3] = {this, 3, nullptr, nullptr};
+    _cmdTxn[3].onComplete = _cmdCallback;
+    _cmdTxn[3].user = &_cmdCtx[3];
+
+    // PWM Txn
+    _pwmTxn.config = I2C_CFG_STOP;
+    _pwmTxn.address = _addr;
+    _pwmTxn.length = 17;
+    _pwmTxn.txPtr = nullptr;
+    _pwmTxn.onComplete = _txnCallback;
+    _pwmTxn.user = this;
+
+    // ABM Txn
+    _abmTxn.config = I2C_CFG_STOP;
+    _abmTxn.address = _addr;
+    _abmTxn.length = 17;
+    _abmTxn.txPtr = nullptr;
+    _abmTxn.onComplete = _txnModeCallback;
+    _abmTxn.user = this;
+
+    // set all LED's on by default (will be updated in begin()) after OSD reads if enabled
+    memset(_ledOn, 0xFF, sizeof(_ledOn));
+
+    // Initialize PWM matrix: byte 0 = Page 1 row address (0x00..0x0B)
+    for (uint8_t row = 0; row < kHardwareRows; row++)
+        _pwm_matrix[row][0] = row; // Page 1 Row Address Register
+
+    // Initialize ABM matrix: byte 0 = Page 2 row address (0x00..0x0B)
+    for (uint8_t row = 0; row < kHardwareRows; row++)
+        _abm_matrix[row][0] = row; // Page 2 Row Address Register
 }
+
+IS31FL3733::~IS31FL3733() {
+    if (_begun)
+        end();
+}
+
+// =========================================================================================
+// Initialization (Blocking)
+// =========================================================================================
+
+bool IS31FL3733::begin(uint8_t pfs, uint8_t pur, uint8_t pdr) {
+    // ---------------------------------------------------------------------------------
+    // STEP 1: Configure pins
+    // ---------------------------------------------------------------------------------
+    // SDB pin (active high)
+    if (_sdbPin != 0xFF) {
+        pinMode(_sdbPin, OUTPUT);
+        digitalWrite(_sdbPin, LOW); // Start disabled
+        delay(1);
+        digitalWrite(_sdbPin, HIGH); // Enable device
+        delay(1);
+    }
+
+    // IRQ pin (if provided)
+    if (_irqPin != 0xFF) {
+        pinMode(_irqPin, INPUT);
+        _instance = this; // Set static instance for ISR access
+        attachInterrupt(digitalPinToInterrupt(_irqPin), _irqCallback, FALLING);
+    }
+
+    // ---------------------------------------------------------------------------------
+    // Software RESET
+    // ---------------------------------------------------------------------------------
+
+    // Read RESET register to trigger software reset (puts all registers in known state)
+    uint8_t dummy;
+    if (!_syncRead(RESET, &dummy, 1))
+        return false; // RESET read failed
+
+    // ---------------------------------------------------------------------------------
+    // Configure Page 3 registers
+    // ---------------------------------------------------------------------------------
+
+    // CR: Normal operation (without OSD initially)
+    _crValue = static_cast<uint8_t>(CR_SSD | CR_PFS(pfs & 0x03));
+    if (!_syncWrite(CR, &_crValue, 1))
+        return false; // CR write failed
+
+    // PUR/PDR: Set pull-up/down for de-ghosting (default to all enabled)
+    uint8_t purValue = pur & 0b111; // Mask to 3 bits
+    uint8_t pdrValue = pdr & 0b111; // Mask to 3 bits
+    if (!_syncWrite(SWPUR, &purValue, 1))
+        return false; // SWPUR write failed
+    if (!_syncWrite(CSPDR, &pdrValue, 1))
+        return false; // CSPDR write failed
+
+    // ---------------------------------------------------------------------------------
+    // Configure Page 0: LED On/Off and Open/Short Detection
+    // ---------------------------------------------------------------------------------
+
+    // Minimal OSD sequence (if IRQ pin provided)
+    if (_irqPin != 0xFF) {
+        // Step 1: Enable all LEDs in LEDONOFF
+        if (!_syncWrite(LEDONOFF, _ledOn, 24))
+            return false; // LEDONOFF write failed
+
+        // Step 2: Set GCC to 0x01 for OSD
+        uint8_t gcc_osd = 0x01;
+        if (!_syncWrite(GCC, &gcc_osd, 1))
+            return false; // GCC write failed
+
+        // Step 3: Trigger OSD strobe (CR with OSD bit set)
+        uint8_t cr_osd = static_cast<uint8_t>(_crValue | CR_OSD);
+        if (!_syncWrite(CR, &cr_osd, 1))
+            return false; // CR OSD trigger failed
+
+        // Step 4: Wait for OSD to complete
+        delay(10); // 10ms to ensure completion
+
+        // Step 5: Read LEDOPEN and LEDSHORT registers
+        if (!_syncRead(LEDOPEN, _ledOpen, 24))
+            return false; // LEDOPEN read failed
+        if (!_syncRead(LEDSHORT, _ledShort, 24))
+            return false; // LEDSHORT read failed
+
+        // Store ISR for debug (read after OSD)
+        uint8_t isr_status = 0;
+        if (_syncRead((uint16_t)ISR << 8, &isr_status, 1))
+            _lastISR = isr_status;
+
+        // Compute LED On/Off mask based on open/short status (turn off faulty LEDs)
+        for (size_t i = 0; i < 24; i++)
+            _ledOn[i] = _ledOn[i] & ~(_ledOpen[i] | _ledShort[i]);
+
+        // Write updated LEDONOFF mask (if faults detected)
+        if (!_syncWrite(LEDONOFF, _ledOn, 24))
+            return false; // LEDONOFF update failed
+
+        // Step 6: Restore GCC to normal operating value (0xFF)
+        uint8_t gcc_normal = 0xFF;
+        if (!_syncWrite(GCC, &gcc_normal, 1))
+            return false; // GCC restore failed
+
+        // Step 7: Clear CR OSD bit for normal operation
+        if (!_syncWrite(CR, &_crValue, 1))
+            return false; // CR clear OSD failed
+
+        // Step 8: Unmask interrupts for runtime fault detection
+        uint8_t imr_value = IMR_IO | IMR_IS;
+        if (!_syncWrite((uint16_t)IMR << 8, &imr_value, 1))
+            return false; // IMR write failed
+    } else {
+        // No IRQ - just write LEDONOFF and set GCC to normal
+        if (!_syncWrite(LEDONOFF, _ledOn, 24))
+            return false; // LEDONOFF write failed
+
+        uint8_t gcc_normal = 0xFF;
+        if (!_syncWrite(GCC, &gcc_normal, 1))
+            return false; // GCC write failed
+    }
+
+    // ---------------------------------------------------------------------------------
+    // Clear command transaction pointers and set default page to Page 1 (PWM)
+    // ---------------------------------------------------------------------------------
+
+    _cmdCtx[2].userCallback = nullptr;
+    _cmdCtx[2].user = nullptr;
+    _cmdCtx[3].userCallback = nullptr;
+    _cmdCtx[3].user = nullptr;
+
+    _ensurePage(1);
+
+    // ---------------------------------------------------------------------------------
+    // Initialize PWM to zero for startup (async)
+    // ---------------------------------------------------------------------------------
+
+    Fill(0);
+
+    _begun = true;
+
+    return true;
+}
+
+void IS31FL3733::end() {
+    if (!_begun)
+        return;
+
+    _syncRead(CR, _cmdTx, 1); // RESET the device state
+
+    DeviceOff();
+
+    // Detach IRQ if configured
+    if (_irqPin != 0xFF) {
+        detachInterrupt(digitalPinToInterrupt(_irqPin));
+        _instance = nullptr;
+    }
+
+    _begun = false;
+}
+
+// =========================================================================================
+// Device Control
+// =========================================================================================
+
+void IS31FL3733::DeviceOn() {
+    if (_sdbPin != 0xFF)
+        digitalWrite(_sdbPin, HIGH);
+
+    // Write cached CR register (SSD + runtime config bits)
+    _asyncWrite(CR, &_crValue, 1, nullptr, nullptr);
+
+    _resumeDataTransfers();
+}
+
+void IS31FL3733::DeviceOff() {
+    const uint8_t cr_off = 0x00;
+    _syncWrite(CR, &cr_off, 1); // Ensure CR write completes before cutting power
+
+    if (_sdbPin != 0xFF)
+        digitalWrite(_sdbPin, LOW);
+}
+
+void IS31FL3733::SetGCC(uint8_t gcc) {
+    _asyncWrite(GCC, &gcc, 1, nullptr, nullptr);
+}
+
+void IS31FL3733::SetSWPUR(uint8_t pur) {
+    uint8_t purValue = static_cast<uint8_t>(pur & 0x07);
+    _asyncWrite(SWPUR, &purValue, 1, nullptr, nullptr);
+}
+
+void IS31FL3733::SetCSPDR(uint8_t pdr) {
+    uint8_t pdrValue = static_cast<uint8_t>(pdr & 0x07);
+    _asyncWrite(CSPDR, &pdrValue, 1, nullptr, nullptr);
+}
+
+void IS31FL3733::SetPFS(uint8_t pfs) {
+    _crValue = static_cast<uint8_t>((_crValue & ~0x60u) | CR_PFS(pfs & 0x03));
+    _asyncWrite(CR, &_crValue, 1, nullptr, nullptr);
+}
+
+void IS31FL3733::SetIMR(uint8_t imrMask) {
+    uint8_t mask = static_cast<uint8_t>(imrMask & 0x0F);
+    _asyncWrite((uint16_t)IMR << 8, &mask, 1, nullptr, nullptr);
+}
+
+// =========================================================================================
+// PWM Control (Raw Hardware Interface)
+// =========================================================================================
+
+void IS31FL3733::SetPixelPWM(uint8_t row, uint8_t col, uint8_t pwm) {
+    // guard against out-of-bounds and 0 (1-based indexing)
+    if (row > kHardwareRows || col > kHardwareCols || !row || !col)
+        return;
+
+    // Convert 1-based to 0-based index
+    uint8_t idx = row - 1;
+
+    // [idx][0] is reserved for row address, so column data starts at offset 1
+    _pwm_matrix[idx][col] = pwm;
+
+    // Enqueue row for transmission (if not already enqueued)
+    uint16_t rowBit = 1 << idx;
+    if (_pwmEnqueued & rowBit)
+        return; // Already enqueued
+
+    _pwmPendingRows.store_char(idx);
+    _pwmEnqueued |= rowBit;
+
+    // Kick transmission if not already in-flight
+    if (!_pwmTxn.txPtr && !_pwmLocked)
+        _sendRowPWM();
+}
+
+void IS31FL3733::SetRowPWM(uint8_t row, const uint8_t *pwmValues) {
+    // guard against out-of-bounds and 0 (1-based indexing)
+    if (row > kHardwareRows || !row)
+        return;
+
+    // Convert 1-based to 0-based index
+    uint8_t idx = (row - 1) & 0x0F;
+
+    // Update pwm buffer for the row (starting at offset 1 since [idx][0] is reserved for row
+    // address)
+    memcpy(_pwm_matrix[idx] + 1, pwmValues, kHardwareCols);
+
+    // Enqueue row for transmission (if not already enqueued)
+    uint16_t rowBit = 1 << idx;
+    if (_pwmEnqueued & rowBit)
+        return; // Already enqueued
+
+    _pwmPendingRows.store_char(idx);
+    _pwmEnqueued |= rowBit;
+
+    // Kick transmission if not already in-flight
+    if (!_pwmTxn.txPtr && !_pwmLocked)
+        _sendRowPWM();
+}
+
+// =========================================================================================
+// RGB Pixel Control (Logical Coordinates with Color Order)
+// =========================================================================================
+
+void IS31FL3733::SetPixelColor(uint8_t row, uint8_t col, uint8_t r, uint8_t g, uint8_t b) {
+    if (row > kLogicalRows || col > kHardwareCols || !row || !col)
+        return;
+
+    // Convert 1-based to 0-based index
+    uint8_t idx = row - 1;
+
+    // Map logical row to hardware rows based on color order
+    // baseRow will be 0, 3, 6, or 9 for logical rows 0-3
+    // Add 1 to convert to 1-based indexing for SetPixelPWM
+    uint8_t baseRow = idx * 3 + 1;
+
+    // Set PWM for each channel based on color order
+    switch (_colorOrder) {
+    case ColorOrder::RGB:
+        SetPixelPWM(baseRow + 0, col, r); // R on first row
+        SetPixelPWM(baseRow + 1, col, g); // G on second row
+        SetPixelPWM(baseRow + 2, col, b); // B on third row
+        break;
+    case ColorOrder::GRB:
+        SetPixelPWM(baseRow + 0, col, g); // G on first row
+        SetPixelPWM(baseRow + 1, col, r); // R on second row
+        SetPixelPWM(baseRow + 2, col, b); // B on third row
+        break;
+    case ColorOrder::BRG:
+        SetPixelPWM(baseRow + 0, col, b); // B on first row
+        SetPixelPWM(baseRow + 1, col, r); // R on second row
+        SetPixelPWM(baseRow + 2, col, g); // G on third row
+        break;
+    case ColorOrder::RBG:
+        SetPixelPWM(baseRow + 0, col, r); // R on first row
+        SetPixelPWM(baseRow + 1, col, b); // B on second row
+        SetPixelPWM(baseRow + 2, col, g); // G on third row
+        break;
+    case ColorOrder::GBR:
+        SetPixelPWM(baseRow + 0, col, g); // G on first row
+        SetPixelPWM(baseRow + 1, col, b); // B on second row
+        SetPixelPWM(baseRow + 2, col, r); // R on third row
+        break;
+    case ColorOrder::BGR:
+        SetPixelPWM(baseRow + 0, col, b); // B on first row
+        SetPixelPWM(baseRow + 1, col, g); // G on second row
+        SetPixelPWM(baseRow + 2, col, r); // R on third row
+        break;
+    }
+}
+
+// =========================================================================================
+// Bulk Operations
+// =========================================================================================
+
+void IS31FL3733::Fill(uint8_t pwm) {
+    // Fill all rows with the same PWM value
+    for (uint8_t row = 0; row < kHardwareRows; row++) {
+        memset(_pwm_matrix[row] + 1, pwm, kHardwareCols);
+
+        // Enqueue row
+        uint16_t rowBit = 1 << row;
+        if (!(_pwmEnqueued & rowBit)) {
+            _pwmPendingRows.store_char(row);
+            _pwmEnqueued |= rowBit;
+        }
+    }
+
+    // Kick transmission if not already in-flight
+    if (!_pwmTxn.txPtr && !_pwmLocked) {
+        _sendRowPWM();
+    }
+}
+
+// =========================================================================================
+// Mode Control (ABM / LED Mode Selection - Page 2)
+// =========================================================================================
+
+void IS31FL3733::SetPixelMode(uint8_t row, uint8_t col, ABMMode mode) {
+    // guard against out-of-bounds and 0 (1-based indexing)
+    if (row > kHardwareRows || col > kHardwareCols || !row || !col)
+        return;
+
+    // Convert 1-based to 0-based index
+    uint8_t idx = row - 1;
+
+    // [idx][0] is reserved for row address, so column data starts at offset 1
+    _abm_matrix[idx][col] = static_cast<uint8_t>(mode);
+
+    // Enqueue row for transmission (if not already enqueued)
+    uint16_t rowBit = 1 << idx;
+    if (_abmEnqueued & rowBit)
+        return; // Already enqueued
+
+    _abmPendingRows.store_char(idx);
+    _abmEnqueued |= rowBit;
+
+    // Kick transmission if not already in-flight
+    if (!_abmTxn.txPtr && !_abmLocked)
+        _sendRowMode();
+}
+
+void IS31FL3733::SetRowMode(uint8_t row, ABMMode mode) {
+    // guard against out-of-bounds and 0 (1-based indexing)
+    if (row > kHardwareRows || !row)
+        return;
+
+    // Convert 1-based to 0-based index
+    uint8_t idx = (row - 1) & 0x0F;
+
+    // Update mode buffer for the row (starting at offset 1 since [idx][0] is reserved for row
+    // address)
+    memset(_abm_matrix[idx] + 1, static_cast<uint8_t>(mode), kHardwareCols);
+
+    // Enqueue row for transmission (if not already enqueued)
+    uint16_t rowBit = 1 << idx;
+    if (_abmEnqueued & rowBit)
+        return; // Already enqueued
+
+    _abmPendingRows.store_char(idx);
+    _abmEnqueued |= rowBit;
+
+    // Kick transmission if not already in-flight
+    if (!_abmTxn.txPtr && !_abmLocked)
+        _sendRowMode();
+}
+
+void IS31FL3733::SetMatrixMode(ABMMode mode) {
+    // Fill all rows with the same mode value (Page 2)
+    for (uint8_t row = 0; row < kHardwareRows; row++) {
+        memset(_abm_matrix[row] + 1, static_cast<uint8_t>(mode), kHardwareCols);
+
+        // Enqueue row
+        uint16_t rowBit = 1 << row;
+        if (!(_abmEnqueued & rowBit)) {
+            _abmPendingRows.store_char(row);
+            _abmEnqueued |= rowBit;
+        }
+    }
+
+    // Kick transmission if not already in-flight
+    if (!_abmTxn.txPtr && !_abmLocked) {
+        _sendRowMode();
+    }
+}
+
+ABMMode IS31FL3733::GetPixelMode(uint8_t row, uint8_t col) const {
+    // guard against out-of-bounds and 0 (1-based indexing)
+    if (row > kHardwareRows || col > kHardwareCols || !row || !col)
+        return ABMMode::PWM_MODE;
+
+    // Convert 1-based to 0-based index
+    uint8_t idx = row - 1;
+
+    // Read from cached ABM matrix
+    return static_cast<ABMMode>(_abm_matrix[idx][col]);
+}
+
+void IS31FL3733::SetPixelColorMode(uint8_t row, uint8_t col, ABMMode mode) {
+    if (row > kLogicalRows || col > kHardwareCols || !row || !col)
+        return;
+
+    // Convert 1-based to 0-based index
+    uint8_t idx = row - 1;
+
+    // Map logical row to hardware rows based on color order
+    // baseRow will be 0, 3, 6, or 9 for logical rows 0-3
+    // Add 1 to convert to 1-based indexing for SetPixelMode
+    uint8_t baseRow = idx * 3 + 1;
+
+    // Set mode for each channel (all three use the same ABM mode for "color")
+    SetPixelMode(baseRow + 0, col, mode);
+    SetPixelMode(baseRow + 1, col, mode);
+    SetPixelMode(baseRow + 2, col, mode);
+}
+
+// =========================================================================================
+// Core Transaction Methods
+// =========================================================================================
+
+void IS31FL3733::_ensurePage(uint8_t page) {
+    // Skip page select if we're already on the target page
+    if (_currentPage == page)
+        return;
+
+    // Enqueue unlock transaction (pre-staged in constructor)
+    _hw->enqueueWIRE(&_cmdTxn[0]);
+
+    // Update and enqueue page select transaction
+    _pgSelTx[0] = PSR;
+    _pgSelTx[1] = page & 0b11; // Mask to 2 bits (0-3)
+    _hw->enqueueWIRE(&_cmdTxn[1]);
+
+    // Update tracked page
+    _currentPage = page;
+}
+
+void IS31FL3733::_resumeDataTransfers() {
+    _pwmLocked = false; // Clear PWM lock flag
+    _abmLocked = false; // Clear ABM lock flag
+    _sendRowPWM();      // Resume pending PWM writes
+    _sendRowMode();     // Resume pending ABM writes
+}
+
+bool IS31FL3733::_syncWrite(uint16_t pagereg, const uint8_t *data, uint8_t len) {
+    _syncComplete = false;
+    _syncStatus = 0;
+    _syncTargetCmd = 2;
+    _cmdError &= ~((1u << 0) | (1u << 1) | (1u << 2));
+    _cmdCtx[2].initialStatus = 0;
+
+    _asyncWrite(pagereg, data, len, nullptr, nullptr);
+
+    const unsigned long start = millis();
+    while (!_syncComplete && (millis() - start < 100ul))
+        ; // Spin until complete or timeout
+
+    if (!_syncComplete) {
+        _syncStatus = -1;
+        _syncTargetCmd = -1;
+        _syncComplete = true;
+        return false;
+    }
+
+    return (_syncStatus == 0) && ((_cmdError & ((1u << 0) | (1u << 1) | (1u << 2))) == 0) &&
+           (_cmdCtx[2].initialStatus == 0);
+}
+
+bool IS31FL3733::_syncRead(uint16_t pagereg, uint8_t *dest, uint8_t len) {
+    _syncComplete = false;
+    _syncStatus = 0;
+    _syncTargetCmd = 3;
+    _cmdError &= ~((1u << 0) | (1u << 1) | (1u << 2) | (1u << 3));
+    _cmdCtx[3].initialStatus = 0;
+
+    _asyncRead(pagereg, dest, len, nullptr, nullptr);
+
+    const unsigned long start = millis();
+    while (!_syncComplete && (millis() - start < 100ul))
+        ; // Spin until complete or timeout
+
+    if (!_syncComplete) {
+        _syncStatus = -1;
+        _syncTargetCmd = -1;
+        _syncComplete = true;
+        return false;
+    }
+
+    return (_syncStatus == 0) &&
+           ((_cmdError & ((1u << 0) | (1u << 1) | (1u << 2) | (1u << 3))) == 0) &&
+           (_cmdCtx[3].initialStatus == 0);
+}
+
+// =========================================================================================
+// ABM Configuration (Page 3 Register Updates)
+// =========================================================================================
+
+void IS31FL3733::SetABMCallback(uint8_t abmNum, std::function<void()> callback) {
+    if (abmNum < 1 || abmNum > 3)
+        return;
+
+    _abmCallbacks[abmNum - 1] = callback;
+}
+
+void IS31FL3733::ConfigureABM(uint8_t abmNumber, const ABMConfig &config) {
+    if (abmNumber < 1 || abmNumber > 3)
+        return;
+    uint16_t pagereg = 0;
+    // Route to specific ABM configurator
+    switch (abmNumber) {
+    case 1:
+        pagereg = ABM1CR;
+        break;
+    case 2:
+        pagereg = ABM2CR;
+        break;
+    case 3:
+        pagereg = ABM3CR;
+        break;
+    }
+
+    const uint8_t cfg[4] = {
+        static_cast<uint8_t>(static_cast<uint8_t>(config.T1) | static_cast<uint8_t>(config.T2)),
+        static_cast<uint8_t>(static_cast<uint8_t>(config.T3) | static_cast<uint8_t>(config.T4)),
+        static_cast<uint8_t>(static_cast<uint8_t>(config.Tend) |
+                             static_cast<uint8_t>(config.Tbegin) |
+                             static_cast<uint8_t>((config.Times >> 8) & 0x0F)),
+        static_cast<uint8_t>(config.Times & 0xFF),
+    };
+    _asyncWrite(pagereg, cfg, 4, nullptr, nullptr);
+
+    // Write 1 byte of zeros to TUR (0x0E) to complete latch (per datasheet: "Any write to
+    // 0Eh will latch the ABM configuration")
+    uint8_t turPadding[1] = {0};
+    _asyncWrite(TUR, turPadding, 1, nullptr, nullptr);
+}
+
+void IS31FL3733::ConfigureABM1(const ABMConfig &config) {
+    ConfigureABM(1, config);
+}
+
+void IS31FL3733::ConfigureABM2(const ABMConfig &config) {
+    ConfigureABM(2, config);
+}
+
+void IS31FL3733::ConfigureABM3(const ABMConfig &config) {
+    ConfigureABM(3, config);
+}
+
+void IS31FL3733::EnableABM(bool enable) {
+    if (enable)
+        _crValue |= CR_BEN;
+    else
+        _crValue &= static_cast<uint8_t>(~CR_BEN);
+
+    _asyncWrite(CR, &_crValue, 1, nullptr, nullptr);
+}
+
+void IS31FL3733::TriggerABM() {
+    // Ensure Page 3
+    _ensurePage(3);
+
+    // Write any value to TUR (0x0E) to latch configuration
+    // Per datasheet: "Any write to 0Eh will latch the ABM configuration"
+    // We write 0x00 as the trigger value
+    uint8_t tur_value = 0x00;
+    _asyncWrite(TUR, &tur_value, 1, nullptr, nullptr);
+}
+
+// =========================================================================================
+// Static Callbacks
+// =========================================================================================
+
+void IS31FL3733::_osbCallback(void *user, int status) {
+    IS31FL3733 *self = (IS31FL3733 *)user;
+
+    // Update LED On/Off mask: disable faulty LEDs
+    for (size_t i = 0; i < 24; i++)
+        self->_ledOn[i] = self->_ledOn[i] & ~(self->_ledOpen[i] | self->_ledShort[i]);
+
+    // Write updated LED On/Off register
+    self->_asyncWrite(LEDONOFF, self->_ledOn, 24, nullptr, nullptr);
+
+    // Restore Page 1 and resume PWM/ABM
+    self->_resumeDataTransfers();
+}
+
+void IS31FL3733::_cmdCallback(void *user, int status) {
+    auto *context = static_cast<CmdTxnContext *>(user);
+    if (!context || !context->self)
+        return;
+
+    IS31FL3733 *self = context->self;
+    const uint8_t bit = static_cast<uint8_t>(1u << context->index);
+
+    self->_cmdReturn |= bit;
+    if (status != 0)
+        self->_cmdError |= bit;
+
+    if (self->_syncTargetCmd == static_cast<int8_t>(context->index)) {
+        self->_syncStatus = status;
+        self->_syncComplete = true;
+        self->_syncTargetCmd = -1;
+    }
+
+    // For non-final phases: accumulate status in next phase's context
+    if (!context->isFinal && context->index < 3) {
+        // Chain accumulated status forward: next phase sees all previous failures
+        self->_cmdCtx[context->index + 1].initialStatus |= status;
+        return; // Don't invoke user callback on intermediate phase
+    }
+
+    // Only invoke user callback on final transaction
+    if (context->isFinal && context->userCallback)
+        context->userCallback(context->user, status);
+}
+
+// =========================================================================================
+// ABM Callback Wrappers (Static Entry Points for PendSV Dispatch)
+// =========================================================================================
+
+void IS31FL3733::_abm1CallbackWrapper() {
+    if (_instance && _instance->_abmCallbacks[0])
+        _instance->_abmCallbacks[0]();
+}
+
+void IS31FL3733::_abm2CallbackWrapper() {
+    if (_instance && _instance->_abmCallbacks[1])
+        _instance->_abmCallbacks[1]();
+}
+
+void IS31FL3733::_abm3CallbackWrapper() {
+    if (_instance && _instance->_abmCallbacks[2])
+        _instance->_abmCallbacks[2]();
+}
+
+} // namespace IS31FL3733
