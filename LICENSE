@@ -1,4 +1,4 @@
-MIT License
+# MIT License
 
 Copyright (c) 2021 Neil Enns
 Copyright (c) 2026 Cal Abel
@@ -29,4 +29,4 @@ SOFTWARE.
 
 - Derived from Adafruit NeoPixel library
 - Licensed under LGPL-3.0
-- See: https://github.com/adafruit/Adafruit_NeoPixel
+- See: <https://github.com/adafruit/Adafruit_NeoPixel>
