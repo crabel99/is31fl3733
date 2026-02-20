@@ -250,13 +250,13 @@ constexpr int kAbmLoopForever = 0x0000;
 /// - ABMxCR+2 = Tend | Tbegin | ((Times >> 8) & 0x0F)
 /// - ABMxCR+3 = (Times & 0xFF)
 struct ABMConfig {
-    AbmT1 T1;             ///< Fade-in segment duration selector
-    AbmT2 T2;             ///< Hold-high segment duration selector
-    AbmT3 T3;             ///< Fade-out segment duration selector
-    AbmT4 T4;             ///< Off-time segment duration selector
-    AbmLoopBegin Tbegin;  ///< Loop begin segment selector
-    AbmLoopEnd Tend;      ///< Loop end segment selector
-    uint16_t Times;       ///< Loop count (0 = kAbmLoopForever, max = kAbmLoopTimesMax)
+    AbmT1 T1;            ///< Fade-in segment duration selector
+    AbmT2 T2;            ///< Hold-high segment duration selector
+    AbmT3 T3;            ///< Fade-out segment duration selector
+    AbmT4 T4;            ///< Off-time segment duration selector
+    AbmLoopBegin Tbegin; ///< Loop begin segment selector
+    AbmLoopEnd Tend;     ///< Loop end segment selector
+    uint16_t Times;      ///< Loop count (0 = kAbmLoopForever, max = kAbmLoopTimesMax)
 };
 
 // -----------------------------------------------------------------------------------------
