@@ -6,6 +6,10 @@
 [![PlatformIO Tests](https://github.com/crabel99/is31fl3733/actions/workflows/platformio-tests.yml/badge.svg?branch=async-implementation)](https://github.com/crabel99/is31fl3733/actions/workflows/platformio-tests.yml)
 [![Documentation](https://github.com/crabel99/is31fl3733/actions/workflows/documentation.yml/badge.svg?branch=async-implementation)](https://github.com/crabel99/is31fl3733/actions/workflows/documentation.yml)
 
+## 📚 Documentation
+
+- [View hosted API docs (GitHub Pages)](https://crabel99.github.io/is31fl3733/)
+
 **CI Workflows:**
 
 - **Compile Examples**: Builds both Arduino examples across supported SimIO boards.
