@@ -12,18 +12,17 @@ using namespace ColorUtils;
 TEST_GROUP(EmbeddedAdvanced);
 
 // Recover I2C bus from stuck state (GPIO-level control to release slave holds)
-inline void recoverI2cBus()
-{
-    // Wire1 on SimIO_Device_M0: PA16 (SDA), PA17 (SCL) -> D18, D19
-    constexpr uint8_t pinSDA = 18;  // PA16
-    constexpr uint8_t pinSCL = 19;  // PA17
-    
-    const auto& sdaDesc = g_APinDescription[pinSDA];
-    const auto& sclDesc = g_APinDescription[pinSCL];
+// Based on SimIOFramework_test pattern - takes pin numbers as parameters
+inline void recoverI2cBus(uint8_t pinSDA, uint8_t pinSCL) {
+    if (pinSDA == 0xFF || pinSCL == 0xFF)
+        return;
+
+    const auto &sdaDesc = g_APinDescription[pinSDA];
+    const auto &sclDesc = g_APinDescription[pinSCL];
     const uint32_t sdaMask = (1ul << sdaDesc.ulPin);
     const uint32_t sclMask = (1ul << sclDesc.ulPin);
-    PortGroup* sdaPort = &PORT->Group[sdaDesc.ulPort];
-    PortGroup* sclPort = &PORT->Group[sclDesc.ulPort];
+    PortGroup *sdaPort = &PORT->Group[sdaDesc.ulPort];
+    PortGroup *sclPort = &PORT->Group[sclDesc.ulPort];
 
     // Disable peripheral multiplexer to control as GPIO
     bool sdaPmuxWasEnabled = sdaPort->PINCFG[sdaDesc.ulPin].bit.PMUXEN;
@@ -38,63 +37,73 @@ inline void recoverI2cBus()
     // Check if bus is already idle
     if ((sdaPort->IN.reg & sdaMask) && (sclPort->IN.reg & sclMask)) {
         // Bus idle, just restore PMUX
-        if (sdaPmuxWasEnabled) sdaPort->PINCFG[sdaDesc.ulPin].bit.PMUXEN = 1;
-        if (sclPmuxWasEnabled) sclPort->PINCFG[sclDesc.ulPin].bit.PMUXEN = 1;
+        if (sdaPmuxWasEnabled)
+            sdaPort->PINCFG[sdaDesc.ulPin].bit.PMUXEN = 1;
+        if (sclPmuxWasEnabled)
+            sclPort->PINCFG[sclDesc.ulPin].bit.PMUXEN = 1;
         return;
     }
 
     // Bus stuck - clock SCL to release slave hold on SDA
-    sclPort->OUTSET.reg = sclMask;  // SCL high
-    sclPort->DIRSET.reg = sclMask;  // SCL as output
+    sclPort->OUTSET.reg = sclMask; // SCL high
+    sclPort->DIRSET.reg = sclMask; // SCL as output
 
     // Clock SCL up to 9 times to release SDA
     for (uint8_t i = 0; i < 9 && !(sdaPort->IN.reg & sdaMask); ++i) {
-        sclPort->OUTCLR.reg = sclMask;  // Pull SCL low
+        sclPort->OUTCLR.reg = sclMask; // Pull SCL low
         sclPort->DIRSET.reg = sclMask;
         delayMicroseconds(5);
-        sclPort->DIRCLR.reg = sclMask;  // Release SCL (pullup brings high)
+        sclPort->DIRCLR.reg = sclMask; // Release SCL (pullup brings high)
         delayMicroseconds(5);
     }
 
     // Generate STOP condition if SDA still stuck
     if (!(sdaPort->IN.reg & sdaMask)) {
-        sdaPort->OUTCLR.reg = sdaMask;  // SDA low
+        sdaPort->OUTCLR.reg = sdaMask; // SDA low
         sdaPort->DIRSET.reg = sdaMask;
         delayMicroseconds(5);
-        sclPort->OUTSET.reg = sclMask;  // SCL high
+        sclPort->OUTSET.reg = sclMask; // SCL high
         delayMicroseconds(5);
-        sdaPort->DIRCLR.reg = sdaMask;  // SDA high (STOP)
+        sdaPort->DIRCLR.reg = sdaMask; // SDA high (STOP)
         delayMicroseconds(5);
     }
 
     // Restore PMUX settings
-    if (sdaPmuxWasEnabled) sdaPort->PINCFG[sdaDesc.ulPin].bit.PMUXEN = 1;
-    if (sclPmuxWasEnabled) sclPort->PINCFG[sclDesc.ulPin].bit.PMUXEN = 1;
+    if (sdaPmuxWasEnabled)
+        sdaPort->PINCFG[sdaDesc.ulPin].bit.PMUXEN = 1;
+    if (sclPmuxWasEnabled)
+        sclPort->PINCFG[sclDesc.ulPin].bit.PMUXEN = 1;
 }
 
 #define CREATE_TEST_DRIVER()                                                                       \
     IS31FL3733::IS31FL3733 driver(&test_embedded::is31fl3733_pins::WIRE, 0x50,                     \
                                   test_embedded::is31fl3733_pins::SDB,                             \
                                   test_embedded::is31fl3733_pins::INTB);                           \
-    bool begin_ok = driver.begin();                                                               \
-    if (!begin_ok) {                                                                              \
-        delay(5);                                                                                 \
-        begin_ok = driver.begin();                                                                \
-    }                                                                                             \
+    bool begin_ok = driver.begin();                                                                \
+    if (!begin_ok) {                                                                               \
+        delay(5);                                                                                  \
+        begin_ok = driver.begin();                                                                 \
+    }                                                                                              \
     TEST_ASSERT_TRUE_MESSAGE(begin_ok, "IS31FL3733::begin() failed")
 
 TEST_SETUP(EmbeddedAdvanced) {
+    using namespace test_embedded::is31fl3733_pins;
+
     // Recover I2C bus from stuck state before initialization
-    recoverI2cBus();
-    
-    test_embedded::is31fl3733_pins::WIRE.begin();
-    test_embedded::is31fl3733_pins::WIRE.setClock(test_embedded::is31fl3733_pins::WIRE_BAUDRATE);
+    recoverI2cBus(PIN_SDA, PIN_SCL);
+
+    WIRE.begin();
+    // Configure PA16/PA17 for SERCOM1 (Wire1)
+    pinPeripheral(PIN_SDA, PIO_SERCOM); // PA16 -> SERCOM1 PAD[0] (SDA)
+    pinPeripheral(PIN_SCL, PIO_SERCOM); // PA17 -> SERCOM1 PAD[1] (SCL)
+    WIRE.setClock(WIRE_BAUDRATE);
     delay(2);
 }
 
 TEST_TEAR_DOWN(EmbeddedAdvanced) {
+    using namespace test_embedded::is31fl3733_pins;
     // Driver object is stack-scoped per test; destructor handles end() lifecycle.
-    test_embedded::is31fl3733_pins::WIRE.end();
+    WIRE.end();
 }
 
 // =========================================================================================

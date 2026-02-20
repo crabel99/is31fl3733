@@ -22,10 +22,10 @@ TEST_GROUP(EmbeddedBasic);
     TEST_ASSERT_TRUE_MESSAGE(begin_ok, "IS31FL3733::begin() failed - check I2C connection")
 
 // Recover I2C bus from stuck state (GPIO-level control to release slave holds)
-inline void recoverI2cBus() {
-    // Wire1 on SimIO_Device_M0: PA16 (SDA), PA17 (SCL) -> D18, D19
-    constexpr uint8_t pinSDA = 18; // PA16
-    constexpr uint8_t pinSCL = 19; // PA17
+// Based on SimIOFramework_test pattern - takes pin numbers as parameters
+inline void recoverI2cBus(uint8_t pinSDA, uint8_t pinSCL) {
+    if (pinSDA == 0xFF || pinSCL == 0xFF)
+        return;
 
     const auto &sdaDesc = g_APinDescription[pinSDA];
     const auto &sclDesc = g_APinDescription[pinSCL];
@@ -86,11 +86,16 @@ inline void recoverI2cBus() {
 }
 
 TEST_SETUP(EmbeddedBasic) {
+    using namespace test_embedded::is31fl3733_pins;
+
     // Recover I2C bus from stuck state before initialization
-    recoverI2cBus();
+    recoverI2cBus(PIN_SDA, PIN_SCL);
 
     Wire1.begin();
-    Wire1.setClock(400000);
+    // Configure PA16/PA17 for SERCOM1 (Wire1)
+    pinPeripheral(PIN_SDA, PIO_SERCOM); // PA16 -> SERCOM1 PAD[0] (SDA)
+    pinPeripheral(PIN_SCL, PIO_SERCOM); // PA17 -> SERCOM1 PAD[1] (SCL)
+    Wire1.setClock(WIRE_BAUDRATE);
     delay(2);
 }
 
