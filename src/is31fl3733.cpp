@@ -94,11 +94,11 @@ IS31FL3733::IS31FL3733(TwoWire *wire, uint8_t addr, uint8_t sdbPin, uint8_t irqP
     memset(_ledOn, 0xFF, sizeof(_ledOn));
 
     // Initialize PWM matrix: byte 0 = Page 1 row address (0x00..0x0B)
-    for (uint8_t row = 0; row < HARDWARE_ROWS; row++)
+    for (uint8_t row = 0; row < kHardwareRows; row++)
         _pwm_matrix[row][0] = row; // Page 1 Row Address Register
 
     // Initialize ABM matrix: byte 0 = Page 2 row address (0x00..0x0B)
-    for (uint8_t row = 0; row < HARDWARE_ROWS; row++)
+    for (uint8_t row = 0; row < kHardwareRows; row++)
         _abm_matrix[row][0] = row; // Page 2 Row Address Register
 }
 
@@ -132,7 +132,7 @@ bool IS31FL3733::begin(uint8_t pfs, uint8_t pur, uint8_t pdr) {
     }
 
     // ---------------------------------------------------------------------------------
-    // Software Reset
+    // Software RESET
     // ---------------------------------------------------------------------------------
 
     // Read RESET register to trigger software reset (puts all registers in known state)
@@ -248,7 +248,7 @@ void IS31FL3733::end() {
     if (!_begun)
         return;
 
-    _syncRead(CR, _cmdTx, 1); // Reset the device state
+    _syncRead(CR, _cmdTx, 1); // RESET the device state
 
     DeviceOff();
 
@@ -313,7 +313,7 @@ void IS31FL3733::SetIMR(uint8_t imrMask) {
 
 void IS31FL3733::SetPixelPWM(uint8_t row, uint8_t col, uint8_t pwm) {
     // guard against out-of-bounds and 0 (1-based indexing)
-    if (row > HARDWARE_ROWS || col > HARDWARE_COLS || !row || !col)
+    if (row > kHardwareRows || col > kHardwareCols || !row || !col)
         return;
 
     // Convert 1-based to 0-based index
@@ -337,7 +337,7 @@ void IS31FL3733::SetPixelPWM(uint8_t row, uint8_t col, uint8_t pwm) {
 
 void IS31FL3733::SetRowPWM(uint8_t row, const uint8_t *pwmValues) {
     // guard against out-of-bounds and 0 (1-based indexing)
-    if (row > HARDWARE_ROWS || !row)
+    if (row > kHardwareRows || !row)
         return;
 
     // Convert 1-based to 0-based index
@@ -345,7 +345,7 @@ void IS31FL3733::SetRowPWM(uint8_t row, const uint8_t *pwmValues) {
 
     // Update pwm buffer for the row (starting at offset 1 since [idx][0] is reserved for row
     // address)
-    memcpy(_pwm_matrix[idx] + 1, pwmValues, HARDWARE_COLS);
+    memcpy(_pwm_matrix[idx] + 1, pwmValues, kHardwareCols);
 
     // Enqueue row for transmission (if not already enqueued)
     uint16_t rowBit = 1 << idx;
@@ -365,7 +365,7 @@ void IS31FL3733::SetRowPWM(uint8_t row, const uint8_t *pwmValues) {
 // =========================================================================================
 
 void IS31FL3733::SetPixelColor(uint8_t row, uint8_t col, uint8_t r, uint8_t g, uint8_t b) {
-    if (row > LOGICAL_ROWS || col > HARDWARE_COLS || !row || !col)
+    if (row > kLogicalRows || col > kHardwareCols || !row || !col)
         return;
 
     // Convert 1-based to 0-based index
@@ -417,8 +417,8 @@ void IS31FL3733::SetPixelColor(uint8_t row, uint8_t col, uint8_t r, uint8_t g, u
 
 void IS31FL3733::Fill(uint8_t pwm) {
     // Fill all rows with the same PWM value
-    for (uint8_t row = 0; row < HARDWARE_ROWS; row++) {
-        memset(_pwm_matrix[row] + 1, pwm, HARDWARE_COLS);
+    for (uint8_t row = 0; row < kHardwareRows; row++) {
+        memset(_pwm_matrix[row] + 1, pwm, kHardwareCols);
 
         // Enqueue row
         uint16_t rowBit = 1 << row;
@@ -440,7 +440,7 @@ void IS31FL3733::Fill(uint8_t pwm) {
 
 void IS31FL3733::SetPixelMode(uint8_t row, uint8_t col, ABMMode mode) {
     // guard against out-of-bounds and 0 (1-based indexing)
-    if (row > HARDWARE_ROWS || col > HARDWARE_COLS || !row || !col)
+    if (row > kHardwareRows || col > kHardwareCols || !row || !col)
         return;
 
     // Convert 1-based to 0-based index
@@ -464,7 +464,7 @@ void IS31FL3733::SetPixelMode(uint8_t row, uint8_t col, ABMMode mode) {
 
 void IS31FL3733::SetRowMode(uint8_t row, ABMMode mode) {
     // guard against out-of-bounds and 0 (1-based indexing)
-    if (row > HARDWARE_ROWS || !row)
+    if (row > kHardwareRows || !row)
         return;
 
     // Convert 1-based to 0-based index
@@ -472,7 +472,7 @@ void IS31FL3733::SetRowMode(uint8_t row, ABMMode mode) {
 
     // Update mode buffer for the row (starting at offset 1 since [idx][0] is reserved for row
     // address)
-    memset(_abm_matrix[idx] + 1, static_cast<uint8_t>(mode), HARDWARE_COLS);
+    memset(_abm_matrix[idx] + 1, static_cast<uint8_t>(mode), kHardwareCols);
 
     // Enqueue row for transmission (if not already enqueued)
     uint16_t rowBit = 1 << idx;
@@ -489,8 +489,8 @@ void IS31FL3733::SetRowMode(uint8_t row, ABMMode mode) {
 
 void IS31FL3733::SetMatrixMode(ABMMode mode) {
     // Fill all rows with the same mode value (Page 2)
-    for (uint8_t row = 0; row < HARDWARE_ROWS; row++) {
-        memset(_abm_matrix[row] + 1, static_cast<uint8_t>(mode), HARDWARE_COLS);
+    for (uint8_t row = 0; row < kHardwareRows; row++) {
+        memset(_abm_matrix[row] + 1, static_cast<uint8_t>(mode), kHardwareCols);
 
         // Enqueue row
         uint16_t rowBit = 1 << row;
@@ -508,8 +508,8 @@ void IS31FL3733::SetMatrixMode(ABMMode mode) {
 
 ABMMode IS31FL3733::GetPixelMode(uint8_t row, uint8_t col) const {
     // guard against out-of-bounds and 0 (1-based indexing)
-    if (row > HARDWARE_ROWS || col > HARDWARE_COLS || !row || !col)
-        return ABMMode::PWM;
+    if (row > kHardwareRows || col > kHardwareCols || !row || !col)
+        return ABMMode::PWM_MODE;
 
     // Convert 1-based to 0-based index
     uint8_t idx = row - 1;
@@ -519,7 +519,7 @@ ABMMode IS31FL3733::GetPixelMode(uint8_t row, uint8_t col) const {
 }
 
 void IS31FL3733::SetPixelColorMode(uint8_t row, uint8_t col, ABMMode mode) {
-    if (row > LOGICAL_ROWS || col > HARDWARE_COLS || !row || !col)
+    if (row > kLogicalRows || col > kHardwareCols || !row || !col)
         return;
 
     // Convert 1-based to 0-based index

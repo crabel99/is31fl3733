@@ -33,7 +33,7 @@ TEST(NativeAsyncLogic, pwm_matrix_initialization) {
     Driver driver(nullptr, 0x50, 0xFF, 0xFF);
 
     // Verify PWM matrix row addresses are initialized (0x00..0x0B)
-    for (uint8_t row = 0; row < HARDWARE_ROWS; row++) {
+    for (uint8_t row = 0; row < kHardwareRows; row++) {
         TEST_ASSERT_EQUAL_UINT8(row, driver._pwm_matrix[row][0]);
     }
 }
@@ -124,8 +124,8 @@ TEST(NativeAsyncLogic, setpixelpwm_bounds_do_not_enqueue) {
     // row/col are 1-based; these should be ignored
     driver.SetPixelPWM(0, 1, 123);
     driver.SetPixelPWM(1, 0, 123);
-    driver.SetPixelPWM(HARDWARE_ROWS + 1, 1, 123);
-    driver.SetPixelPWM(1, HARDWARE_COLS + 1, 123);
+    driver.SetPixelPWM(kHardwareRows + 1, 1, 123);
+    driver.SetPixelPWM(1, kHardwareCols + 1, 123);
 
     TEST_ASSERT_EQUAL_UINT16(0, driver._pwmEnqueued);
 
@@ -137,20 +137,20 @@ TEST(NativeAsyncLogic, setpixelpwm_bounds_do_not_enqueue) {
 TEST(NativeAsyncLogic, setrowpwm_bounds_do_not_enqueue) {
     TwoWire wire;
     Driver driver(&wire, 0x50, 0xFF, 0xFF);
-    uint8_t values[HARDWARE_COLS];
+    uint8_t values[kHardwareCols];
     memset(values, 0x5A, sizeof(values));
 
     TEST_ASSERT_EQUAL_UINT16(0, driver._pwmEnqueued);
 
     // row is 1-based; these should be ignored
     driver.SetRowPWM(0, values);
-    driver.SetRowPWM(HARDWARE_ROWS + 1, values);
+    driver.SetRowPWM(kHardwareRows + 1, values);
 
     TEST_ASSERT_EQUAL_UINT16(0, driver._pwmEnqueued);
 
     // Valid update should copy row data (queue may drain immediately in native mocks)
     driver.SetRowPWM(1, values);
-    for (uint8_t col = 1; col <= HARDWARE_COLS; col++) {
+    for (uint8_t col = 1; col <= kHardwareCols; col++) {
         TEST_ASSERT_EQUAL_UINT8(0x5A, driver._pwm_matrix[0][col]);
     }
 }
@@ -176,16 +176,16 @@ TEST(NativeAsyncLogic, fill_updates_all_rows_and_enqueues_each_once) {
     driver.Fill(64);
 
     // All PWM bytes for each row should be set to fill value (index 1..16)
-    for (uint8_t row = 0; row < HARDWARE_ROWS; row++) {
-        for (uint8_t col = 1; col <= HARDWARE_COLS; col++) {
+    for (uint8_t row = 0; row < kHardwareRows; row++) {
+        for (uint8_t col = 1; col <= kHardwareCols; col++) {
             TEST_ASSERT_EQUAL_UINT8(64, driver._pwm_matrix[row][col]);
         }
     }
 
     // Re-filling should update all data again
     driver.Fill(32);
-    for (uint8_t row = 0; row < HARDWARE_ROWS; row++) {
-        for (uint8_t col = 1; col <= HARDWARE_COLS; col++) {
+    for (uint8_t row = 0; row < kHardwareRows; row++) {
+        for (uint8_t col = 1; col <= kHardwareCols; col++) {
             TEST_ASSERT_EQUAL_UINT8(32, driver._pwm_matrix[row][col]);
         }
     }
@@ -1024,20 +1024,20 @@ TEST(NativeAsyncLogic, setpixelcolor_invalid_inputs_noop) {
     Driver driver(&wire, 0x50, 0xFF, 0xFF);
 
     // Initialize matrix data to a known value
-    for (uint8_t row = 0; row < HARDWARE_ROWS; row++) {
-        for (uint8_t col = 1; col <= HARDWARE_COLS; col++) {
+    for (uint8_t row = 0; row < kHardwareRows; row++) {
+        for (uint8_t col = 1; col <= kHardwareCols; col++) {
             driver._pwm_matrix[row][col] = 0xA5;
         }
     }
 
     // Invalid row/col combinations should early-return and not modify matrix
     driver.SetPixelColor(0, 1, 1, 2, 3);
-    driver.SetPixelColor(LOGICAL_ROWS + 1, 1, 1, 2, 3);
+    driver.SetPixelColor(kLogicalRows + 1, 1, 1, 2, 3);
     driver.SetPixelColor(1, 0, 1, 2, 3);
-    driver.SetPixelColor(1, HARDWARE_COLS + 1, 1, 2, 3);
+    driver.SetPixelColor(1, kHardwareCols + 1, 1, 2, 3);
 
-    for (uint8_t row = 0; row < HARDWARE_ROWS; row++) {
-        for (uint8_t col = 1; col <= HARDWARE_COLS; col++) {
+    for (uint8_t row = 0; row < kHardwareRows; row++) {
+        for (uint8_t col = 1; col <= kHardwareCols; col++) {
             TEST_ASSERT_EQUAL_UINT8(0xA5, driver._pwm_matrix[row][col]);
         }
     }
@@ -1110,7 +1110,7 @@ TEST(NativeAsyncLogic, configureabm_invalid_selector_noop) {
     hw->resetTrace();
 
     ABMConfig cfg = {
-        T1_210MS, T2_0MS, T3_210MS, T4_0MS, LOOP_BEGIN_T1, LOOP_END_T3, ABM_LOOP_FOREVER,
+        T1_210MS, T2_0MS, T3_210MS, T4_0MS, LOOP_BEGIN_T1, LOOP_END_T3, kAbmLoopForever,
     };
 
     driver.ConfigureABM(0, cfg);

@@ -31,24 +31,33 @@ namespace IS31FL3733 {
 // Constants
 // -----------------------------------------------------------------------------------------
 
-constexpr uint8_t HARDWARE_ROWS = 12; ///< IS31FL3733 SW lines (hardware rows)
-constexpr uint8_t HARDWARE_COLS = 16; ///< IS31FL3733 CS lines (hardware columns)
-constexpr uint8_t LED_COUNT = HARDWARE_ROWS * HARDWARE_COLS;
+constexpr uint8_t kHardwareRows = 12; ///< IS31FL3733 SW lines (hardware rows)
+constexpr uint8_t kHardwareCols = 16; ///< IS31FL3733 CS lines (hardware columns)
+constexpr uint8_t kLedCount = kHardwareRows * kHardwareCols; ///< Total LED count (192)
 
-constexpr uint8_t LOGICAL_ROWS = 4; ///< RGB pixel rows (3 channels × 4 rows = 12)
+constexpr uint8_t kLogicalRows = 4; ///< RGB pixel rows (3 channels x 4 rows = 12)
 
 // -----------------------------------------------------------------------------------------
 // Register Addresses (Common + Paged)
 // -----------------------------------------------------------------------------------------
 
-enum COMMONREGISTER : uint8_t {
+/// @brief Common registers accessible from any page.
+///
+/// These registers are in the common register space and can be accessed
+/// regardless of the current page selection.
+enum CommonRegister : uint8_t {
     PSR = 0xFD,  ///< Page Select Register (write only)
     PSWL = 0xFE, ///< Page Select Write Lock (read/write)
     IMR = 0xF0,  ///< Interrupt Mask Register (write only)
     ISR = 0xF1,  ///< Interrupt Status Register (read only)
 };
 
-enum PAGEDREGISTER : uint16_t {
+/// @brief Paged registers accessible after page selection via PSR.
+///
+/// These registers are accessed by first writing the page number to PSR,
+/// then reading/writing at the specified offset. The upper byte encodes
+/// the page number (0-3), lower byte is the register offset.
+enum PagedRegister : uint16_t {
     LEDONOFF = 0x0000, ///< Page 0: LED On/Off (24 bytes, 0x00..0x17)
     LEDOPEN = 0x0018,  ///< Page 0: LED Open Status (24 bytes, 0x18..0x2F, read only)
     LEDSHORT = 0x0030, ///< Page 0: LED Short Status (24 bytes, 0x30..0x47, read only)
@@ -62,26 +71,38 @@ enum PAGEDREGISTER : uint16_t {
     TUR = 0x030E,      ///< Page 3: Time Update Register (write only)
     SWPUR = 0x030F,    ///< Page 3: SWy Pull-Up Resistor (write only)
     CSPDR = 0x0310,    ///< Page 3: CSx Pull-Down Resistor (read only)
-    RESET = 0x0311,    ///< Page 3: Reset Register (read only)
+    RESET = 0x0311,    ///< Page 3: RESET Register (read only)
 };
 
 // -----------------------------------------------------------------------------------------
 // Register Configuration Options
 // -----------------------------------------------------------------------------------------
 
-enum PSWL_OPTIONS : uint8_t {
+/// @brief Page Select Write Lock register values.
+///
+/// Controls whether the PSR (Page Select Register) can be modified.
+/// Write PSWL_ENABLE to lock, PSWL_DISABLE to unlock.
+enum PswlOptions : uint8_t {
     PSWL_DISABLE = 0x00,
     PSWL_ENABLE = 0xC5,
 };
 
-enum IMR_OPTIONS : uint8_t {
+/// @brief Interrupt Mask Register bit flags.
+///
+/// Write these flags to IMR to enable/disable specific interrupt sources.
+/// Multiple flags can be OR'd together.
+enum ImrOptions : uint8_t {
     IMR_IAC = 0x08, ///< Auto Clear Interrupt
     IMR_IAB = 0x04, ///< Auto Breath Interrupt
     IMR_IS = 0x02,  ///< Short Interrupt
     IMR_IO = 0x01,  ///< Open Interrupt
 };
 
-enum ISR_OPTIONS : uint8_t {
+/// @brief Interrupt Status Register bit flags.
+///
+/// Read ISR to determine which interrupt(s) occurred.
+/// Bits are automatically cleared when read (if IMR_IAC is set).
+enum IsrOptions : uint8_t {
     ISR_ABM3 = 0x10, ///< ABM-3 Finish
     ISR_ABM2 = 0x08, ///< ABM-2 Finish
     ISR_ABM1 = 0x04, ///< ABM-1 Finish
@@ -89,7 +110,11 @@ enum ISR_OPTIONS : uint8_t {
     ISR_OB = 0x01,   ///< Open Bit
 };
 
-enum CR_OPTIONS : uint8_t {
+/// @brief Configuration Register (CR) bit flags.
+///
+/// Controls device operating mode, synchronization, and power state.
+/// Multiple flags can be OR'd together.
+enum CrOptions : uint8_t {
     CR_SYNC_MASTER = 0x40,
     CR_SYNC_SLAVE = 0x80,
     CR_OSD = 0x04, ///< Open/Short Detection Enable
@@ -97,6 +122,10 @@ enum CR_OPTIONS : uint8_t {
     CR_SSD = 0x01, ///< Software Shutdown (1 = normal, 0 = shutdown)
 };
 
+/// @brief Helper function to encode page select bits for CR register.
+///
+/// @param page Page number (0-3)
+/// @return CR register value with PFS bits [6:5] set
 inline uint8_t CR_PFS(uint8_t page) {
     return (page & 0x03) << 5;
 } // PSR bits are [6:5] for page select
@@ -105,6 +134,10 @@ inline uint8_t CR_PFS(uint8_t page) {
 // Color Order Enum
 // -----------------------------------------------------------------------------------------
 
+/// @brief RGB channel order for mapping pixel colors to hardware SW lines.
+///
+/// Defines how each RGB pixel's channels map to consecutive hardware rows.
+/// Used by IS31FL3733RgbMatrix for color channel routing.
 enum class ColorOrder : uint8_t {
     RGB = 0,
     GRB = 1,
@@ -114,8 +147,12 @@ enum class ColorOrder : uint8_t {
     BGR = 5,
 };
 
+/// @brief Auto Breath Mode (ABM) selection.
+///
+/// Controls which breathing effect mode is active for the LED matrix.
+/// PWM_MODE = normal PWM control, ABM1/2/3 = automatic breathing patterns.
 enum class ABMMode : uint8_t {
-    PWM = 0x00,
+    PWM_MODE = 0x00, // Renamed from PWM to avoid Arduino Due macro conflict
     ABM1 = 0x01,
     ABM2 = 0x02,
     ABM3 = 0x03,
@@ -125,7 +162,7 @@ enum class ABMMode : uint8_t {
 ///
 /// Encoded for ABMxCR byte 0, bits [7:5].
 /// See datasheet ABM timing table for exact visual waveform behavior.
-enum ABM_T1 : uint8_t {
+enum AbmT1 : uint8_t {
     T1_210MS = 0x00,   ///< 210 ms fade-in
     T1_420MS = 0x20,   ///< 420 ms fade-in
     T1_840MS = 0x40,   ///< 840 ms fade-in
@@ -139,7 +176,7 @@ enum ABM_T1 : uint8_t {
 /// @brief ABM T2 (hold-high) selection values.
 ///
 /// Encoded for ABMxCR byte 0, bits [4:1].
-enum ABM_T2 : uint8_t {
+enum AbmT2 : uint8_t {
     T2_0MS = 0x00,     ///< 0 ms hold-high
     T2_210MS = 0x02,   ///< 210 ms hold-high
     T2_420MS = 0x04,   ///< 420 ms hold-high
@@ -154,7 +191,7 @@ enum ABM_T2 : uint8_t {
 /// @brief ABM T3 (fade-out) selection values.
 ///
 /// Encoded for ABMxCR byte 1, bits [7:5].
-enum ABM_T3 : uint8_t {
+enum AbmT3 : uint8_t {
     T3_210MS = 0x00,   ///< 210 ms fade-out
     T3_420MS = 0x20,   ///< 420 ms fade-out
     T3_840MS = 0x40,   ///< 840 ms fade-out
@@ -168,7 +205,7 @@ enum ABM_T3 : uint8_t {
 /// @brief ABM T4 (off-time) selection values.
 ///
 /// Encoded for ABMxCR byte 1, bits [4:1].
-enum ABM_T4 : uint8_t {
+enum AbmT4 : uint8_t {
     T4_0MS = 0x00,      ///< 0 ms off-time
     T4_210MS = 0x02,    ///< 210 ms off-time
     T4_420MS = 0x04,    ///< 420 ms off-time
@@ -185,7 +222,7 @@ enum ABM_T4 : uint8_t {
 /// @brief ABM loop-begin selector.
 ///
 /// Encoded for ABMxCR byte 2, bits [5:4].
-enum ABM_LOOP_BEGIN : uint8_t {
+enum AbmLoopBegin : uint8_t {
     LOOP_BEGIN_T1 = 0x00, ///< Loop restarts from T1 segment
     LOOP_BEGIN_T2 = 0x10, ///< Loop restarts from T2 segment
     LOOP_BEGIN_T3 = 0x20, ///< Loop restarts from T3 segment
@@ -195,15 +232,15 @@ enum ABM_LOOP_BEGIN : uint8_t {
 /// @brief ABM loop-end selector.
 ///
 /// Encoded for ABMxCR byte 2, bit [6].
-enum ABM_LOOP_END : uint8_t {
+enum AbmLoopEnd : uint8_t {
     LOOP_END_T3 = 0x00, ///< Loop terminates at end of T3
     LOOP_END_T1 = 0x40, ///< Loop terminates at end of T1
 };
 
 /// @brief Maximum finite loop count that fits ABMxCR[2:3] LTA/LTB fields.
-constexpr int ABM_LOOP_TIMES_MAX = 0x0FFF;
+constexpr int kAbmLoopTimesMax = 0x0FFF;
 /// @brief Special loop count value for continuous looping.
-constexpr int ABM_LOOP_FOREVER = 0x0000;
+constexpr int kAbmLoopForever = 0x0000;
 
 /// @brief High-level ABM configuration values before register packing.
 ///
@@ -213,13 +250,13 @@ constexpr int ABM_LOOP_FOREVER = 0x0000;
 /// - ABMxCR+2 = Tend | Tbegin | ((Times >> 8) & 0x0F)
 /// - ABMxCR+3 = (Times & 0xFF)
 struct ABMConfig {
-    ABM_T1 T1;             ///< Fade-in segment duration selector
-    ABM_T2 T2;             ///< Hold-high segment duration selector
-    ABM_T3 T3;             ///< Fade-out segment duration selector
-    ABM_T4 T4;             ///< Off-time segment duration selector
-    ABM_LOOP_BEGIN Tbegin; ///< Loop begin segment selector
-    ABM_LOOP_END Tend;     ///< Loop end segment selector
-    uint16_t Times;        ///< Loop count (0 = ABM_LOOP_FOREVER, max = ABM_LOOP_TIMES_MAX)
+    AbmT1 T1;             ///< Fade-in segment duration selector
+    AbmT2 T2;             ///< Hold-high segment duration selector
+    AbmT3 T3;             ///< Fade-out segment duration selector
+    AbmT4 T4;             ///< Off-time segment duration selector
+    AbmLoopBegin Tbegin;  ///< Loop begin segment selector
+    AbmLoopEnd Tend;      ///< Loop end segment selector
+    uint16_t Times;       ///< Loop count (0 = kAbmLoopForever, max = kAbmLoopTimesMax)
 };
 
 // -----------------------------------------------------------------------------------------
@@ -255,7 +292,7 @@ class IS31FL3733 {
     /// @return true if successful, false otherwise.
     bool begin(uint8_t pfs = 0, uint8_t pur = 0b111, uint8_t pdr = 0b111);
 
-    /// @brief Reset device and disable (hardware shutdown).
+    /// @brief RESET device and disable (hardware shutdown).
     /// Reads RESET register to trigger software reset, then disables device.
     /// Useful for cleanup and testing.
     void end();
@@ -434,12 +471,12 @@ class IS31FL3733 {
     // PWM Matrix and Transaction State (Page 1)
     // ---------------------------------------------------------------------------------------
 
-    uint8_t _pwm_matrix[HARDWARE_ROWS]
-                       [HARDWARE_COLS + 1]; ///< [row][0] = Page 1 row addr, [1..16] = PWM data
+    uint8_t _pwm_matrix[kHardwareRows]
+                       [kHardwareCols + 1]; ///< [row][0] = Page 1 row addr, [1..16] = PWM data
     SercomTxn _pwmTxn;                      ///< Single in-flight PWM transaction descriptor
-    uint8_t _pwmTxPtr[HARDWARE_COLS + 1];   ///< Shadow buffer for current transaction
+    uint8_t _pwmTxPtr[kHardwareCols + 1];   ///< Shadow buffer for current transaction
 
-    RingBufferN<HARDWARE_ROWS> _pwmPendingRows; ///< Ring buffer of row indices to write
+    RingBufferN<kHardwareRows> _pwmPendingRows; ///< Ring buffer of row indices to write
     uint16_t _pwmEnqueued; ///< Bitfield tracking enqueued rows (0x0001..0x0FFF)
 
     bool _pwmLocked; ///< True when command chain has preempted PWM
@@ -447,12 +484,12 @@ class IS31FL3733 {
     // ---------------------------------------------------------------------------------------
     // Mode Matrix and Transaction State (Page 2)
     // ---------------------------------------------------------------------------------------
-    uint8_t _abm_matrix[HARDWARE_ROWS]
-                       [HARDWARE_COLS + 1]; ///< [row][0] = Page 2 row addr, [1..16] = ABM data
+    uint8_t _abm_matrix[kHardwareRows]
+                       [kHardwareCols + 1]; ///< [row][0] = Page 2 row addr, [1..16] = ABM data
     SercomTxn _abmTxn;                      ///< Single in-flight ABM transaction descriptor
-    uint8_t _abmTxPtr[HARDWARE_COLS + 1];   ///< Shadow buffer for current transaction
+    uint8_t _abmTxPtr[kHardwareCols + 1];   ///< Shadow buffer for current transaction
 
-    RingBufferN<HARDWARE_ROWS> _abmPendingRows; ///< Ring buffer of row indices to write
+    RingBufferN<kHardwareRows> _abmPendingRows; ///< Ring buffer of row indices to write
     uint16_t _abmEnqueued; ///< Bitfield tracking enqueued rows (0x0001..0x0FFF)
 
     bool _abmLocked; ///< True when command chain has preempted ABM

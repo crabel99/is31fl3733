@@ -157,8 +157,8 @@ TEST(EmbeddedBasic, BeginLedMaskMatchesOpenShortStatus) {
         return (map[byteOffset] >> bitOffset) & 0x01;
     };
 
-    for (uint8_t sw = 1; sw <= HARDWARE_ROWS; sw++) {
-        for (uint8_t cs = CS_FIRST; cs <= HARDWARE_COLS; cs++) {
+    for (uint8_t sw = 1; sw <= kHardwareRows; sw++) {
+        for (uint8_t cs = CS_FIRST; cs <= kHardwareCols; cs++) {
             const uint8_t openBit = getMapBit(driver._ledOpen, sw, cs);
             const uint8_t shortBit = getMapBit(driver._ledShort, sw, cs);
             const uint8_t onBit = getMapBit(driver._ledOn, sw, cs);

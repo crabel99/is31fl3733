@@ -150,7 +150,7 @@ void loop() { // Simple finite state machine to switch LEDs on after ABM finishe
         Serial.println("ABM1 completed");
         Serial.println("Configure all LEDs for full on");
         driver.EnableABM(false);
-        driver.SetMatrixMode(ABMMode::PWM);
+        driver.SetMatrixMode(ABMMode::PWM_MODE);
 
         ledState = LedState::LEDOn;
         lastState = ledState;
