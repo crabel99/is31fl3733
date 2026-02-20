@@ -7,90 +7,92 @@ on:
 jobs:
   compile-examples:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - fqbn: adafruit:samd:adafruit_feather_m0
-            core: adafruit:samd
-            additional_urls: https://adafruit.github.io/arduino-board-index/package_adafruit_index.json
-          - fqbn: adafruit:samd:adafruit_metro_m0
-            core: adafruit:samd
-            additional_urls: https://adafruit.github.io/arduino-board-index/package_adafruit_index.json
-          - fqbn: adafruit:samd:adafruit_feather_m4
-            core: adafruit:samd
-            additional_urls: https://adafruit.github.io/arduino-board-index/package_adafruit_index.json
-          - fqbn: adafruit:samd:adafruit_metro_m4
-            core: adafruit:samd
-            additional_urls: https://adafruit.github.io/arduino-board-index/package_adafruit_index.json
-          - fqbn: arduino:sam:arduino_due_x
-            core: arduino:sam
-          - fqbn: teensy:avr:teensy41
-            core: teensy:avr
-            additional_urls: https://www.pjrc.com/teensy/package_teensy_index.json
     steps:
       - uses: actions/checkout@v4
-      - uses: arduino/setup-arduino-cli@v1
-      - name: Install core (with retries and fallback)
-        shell: bash
-        run: |
-          set -e
-          MAX_RETRIES=3
-          RETRY_DELAY=10
-          
-          install_core() {
-            local urls="$1"
-            local core="$2"
-            local attempt=1
-            
-            while [ $attempt -le $MAX_RETRIES ]; do
-              echo "Attempt $attempt/$MAX_RETRIES for core $core"
-              if [ -n "$urls" ]; then
-                echo "  Using additional URLs: $urls"
-                if timeout 120 arduino-cli core update-index --additional-urls "$urls" 2>&1 | tee /tmp/index.log; then
-                  if timeout 180 arduino-cli core install "$core" 2>&1; then
-                    echo "  Successfully installed $core"
-                    return 0
-                  fi
-                fi
-              else
-                if timeout 120 arduino-cli core update-index 2>&1 | tee /tmp/index.log; then
-                  if timeout 180 arduino-cli core install "$core" 2>&1; then
-                    echo "  Successfully installed $core"
-                    return 0
-                  fi
-                fi
-              fi
-              
-              echo "  Failed to install $core (attempt $attempt/$MAX_RETRIES)"
-              cat /tmp/index.log || true
-              
-              if [ $attempt -lt $MAX_RETRIES ]; then
-                echo "  Retrying in ${RETRY_DELAY}s..."
-                sleep $RETRY_DELAY
-              fi
-              attempt=$((attempt + 1))
-            done
-            
-            echo "  WARNING: Failed to install core $core after $MAX_RETRIES attempts, skipping..."
-            return 0  # Don't fail the job, continue with other boards
-          }
-          
-          # Install core with retry logic
-          install_core "${{ matrix.additional_urls }}" "${{ matrix.core }}"
-      
-      - name: Create library symlink
-        run: |
-          mkdir -p ~/Arduino/libraries
-          ln -s ${{ github.workspace }} ~/Arduino/libraries/IS31FL3733
-      
-      - uses: arduino/compile-sketches@v1
-        continue-on-error: true
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          fqbn: ${{ matrix.fqbn }}
-          sketch-paths: |
-            examples/abm_arduino
-            examples/rgb_matrix_arduino
+          python-version: '3.x'
+      - name: Install PlatformIO
+        run: |
+          python -m pip install --upgrade pip
+          pip install --upgrade platformio
+      - name: Prepare SimIO framework package (sercom-async-dma)
+        run: |
+          rm -rf /tmp/simiofw-ci
+          git clone --depth 1 --branch sercom-async-dma --recurse-submodules https://github.com/crabel99/SimIOFramework /tmp/simiofw-ci
+          git -C /tmp/simiofw-ci submodule update --init --recursive
+          cat > /tmp/simiofw-ci/package.json <<'EOF'
+          {
+            "name": "framework-arduino-samd-adafruit",
+            "version": "1.0.0",
+            "description": "SimIO Arduino SAMD framework with async SERCOM DMA extensions",
+            "keywords": ["framework", "arduino", "samd", "simio"],
+            "homepage": "https://github.com/crabel99/SimIOFramework",
+            "license": "LGPL-2.1-or-later",
+            "system": ["linux_x86_64"],
+            "platforms": ["atmelsam"]
+          }
+          EOF
+      - name: Compile Arduino examples (PlatformIO + SimIO framework)
+        run: |
+          set -euo pipefail
+
+          BUILD_BOARDS=$(python - <<'PY'
+          import sys
+          simio = set()
+          with open('/tmp/simiofw-ci/boards.txt', 'r', encoding='utf-8') as f:
+              for line in f:
+                  if line.strip().startswith('#') or '.name=' not in line:
+                      continue
+                  key = line.split('.name=', 1)[0].strip()
+                  if key and key.replace('_', '').isalnum() and key.lower() == key:
+                      simio.add(key)
+
+          import json, subprocess
+          out = subprocess.check_output(
+              ['pio', 'boards', '--json-output', 'atmelsam'],
+              text=True,
+          )
+          pio = {item['id'] for item in json.loads(out)}
+
+          common = sorted(simio & pio)
+          missing = sorted(simio - pio)
+
+          print(' '.join(common))
+          if missing:
+              print('Missing in PlatformIO atmelsam: ' + ', '.join(missing), file=sys.stderr)
+          PY
+          )
+
+          if [ -z "$BUILD_BOARDS" ]; then
+            echo "No SimIO-supported boards available in PlatformIO atmelsam."
+            exit 1
+          fi
+
+          echo "Building examples for boards: $BUILD_BOARDS"
+
+          for board in $BUILD_BOARDS; do
+            echo "=== Building board: $board (abm_arduino) ==="
+            pio ci \
+              --board "$board" \
+              --lib=. \
+              --project-option=platform=atmelsam \
+              --project-option=framework=arduino \
+              --project-option=build_flags=-DUSE_TINYUSB \
+              --project-option=platform_packages=framework-arduino-samd-adafruit@symlink:///tmp/simiofw-ci \
+              examples/abm_arduino/abm_arduino.ino
+
+            echo "=== Building board: $board (rgb_matrix_arduino) ==="
+            pio ci \
+              --board "$board" \
+              --lib=. \
+              --project-option=platform=atmelsam \
+              --project-option=framework=arduino \
+              --project-option=build_flags=-DUSE_TINYUSB \
+              --project-option=platform_packages=framework-arduino-samd-adafruit@symlink:///tmp/simiofw-ci \
+              examples/rgb_matrix_arduino/rgb_matrix_arduino.ino
+          done
 
   clang-format:
     runs-on: ubuntu-latest
