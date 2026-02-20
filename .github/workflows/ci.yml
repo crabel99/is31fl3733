@@ -127,7 +127,7 @@ jobs:
           pip install --upgrade platformio
 
       - name: Run PlatformIO native tests
-        run: .venv/bin/pio test -e native -v
+        run: pio test -e native -v
   documentation:
     runs-on: ubuntu-latest
     steps:

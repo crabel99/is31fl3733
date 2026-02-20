@@ -2,7 +2,8 @@
  *  Copyright (c) Cal Abel. All rights reserved.
  *  Licensed under the MIT License. See LICENSE in the project root for license information.
  *
- *  Based on the original IS31FL3733 C++ library by Neil Enns (https://github.com/neilenns/is31fl3733).
+ *  Based on the original IS31FL3733 C++ library by Neil Enns
+ *  (https://github.com/neilenns/is31fl3733).
  *  RGB matrix helper - part of async DMA rewrite for Arduino SAMD.
  *
  *  IS31FL3733 RGB matrix helper utilities.

@@ -3,8 +3,9 @@
  *  Licensed under the MIT License. See LICENSE in the project root for license information.
  *
  *  Based on the original IS31FL3733 C++ library by Neil Enns
- * (https://github.com/neilenns/is31fl3733). This is a nearly complete rewrite for asynchronous
- * DMA-driven operation on Arduino SAMD.
+ *  (https://github.com/neilenns/is31fl3733).
+ *  This is a nearly complete rewrite for asynchronous DMA-driven operation on
+ *  Arduino SAMD.
  *
  *  Asynchronous DMA-driven IS31FL3733 driver implementation.
  *
