@@ -1,4 +1,4 @@
-name: CI (Meta)
+name: CI
 
 on:
   push:
@@ -6,13 +6,18 @@ on:
   workflow_dispatch:
 
 jobs:
-  ci-meta:
-    runs-on: ubuntu-latest
-    steps:
-      - name: CI workflows split notice
-        run: |
-          echo "CI is split across:" 
-          echo "- compile-examples.yml"
-          echo "- clang-format.yml"
-          echo "- platformio-tests.yml"
-          echo "- documentation.yml"
+  compile-examples:
+    name: Compile Examples
+    uses: ./.github/workflows/compile-examples.yml
+
+  clang-format:
+    name: Clang Format
+    uses: ./.github/workflows/clang-format.yml
+
+  platformio-tests:
+    name: PlatformIO Tests
+    uses: ./.github/workflows/platformio-tests.yml
+
+  documentation:
+    name: Documentation
+    uses: ./.github/workflows/documentation.yml

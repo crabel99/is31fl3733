@@ -1,8 +1,7 @@
 name: PlatformIO Tests
 
 on:
-  push:
-  pull_request:
+  workflow_call:
 
 jobs:
   platformio-tests:

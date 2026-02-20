@@ -1,12 +1,7 @@
 name: Documentation
 
 on:
-  push:
-    branches:
-      - main
-      - async-implementation
-  pull_request:
-  workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -22,17 +17,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
       - name: Install Doxygen
         run: |
           sudo apt-get update
           sudo apt-get install -y doxygen graphviz
       - name: Generate Doxygen documentation
         run: doxygen Doxyfile
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Upload documentation artifact
+        uses: actions/upload-artifact@v4
         with:
+          name: doxygen-documentation
           path: html/
 
   deploy-pages:
@@ -43,6 +37,17 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Download documentation artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: doxygen-documentation
+          path: pages-site
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: pages-site/
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
