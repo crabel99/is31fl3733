@@ -7,7 +7,9 @@
 
 // Manually create Wire1 on SERCOM1 with PA16 (SDA), PA17 (SCL)
 // This allows hardware-specific I2C configuration independent of board variant
+#ifndef NATIVE_TEST
 static TwoWire Wire1(&sercom1, 16, 17); // PA16, PA17
+#endif
 
 namespace test_embedded {
 namespace is31fl3733_pins {
@@ -76,12 +78,14 @@ inline SegmentAddressPair SegmentToPair(uint8_t segment) {
 
 // SERCOM1 interrupt handler for Wire1
 // Required when manually creating TwoWire object with custom SERCOM
+#ifndef NATIVE_TEST
 #ifdef __cplusplus
 extern "C" {
 #endif
 void SERCOM1_Handler(void) {
-    Wire1.onService();
+	Wire1.onService();
 }
 #ifdef __cplusplus
 }
 #endif
+#endif // NATIVE_TEST

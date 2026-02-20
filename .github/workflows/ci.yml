@@ -78,6 +78,12 @@ jobs:
           
           # Install core with retry logic
           install_core "${{ matrix.additional_urls }}" "${{ matrix.core }}"
+      
+      - name: Create library symlink
+        run: |
+          mkdir -p ~/Arduino/libraries
+          ln -s ${{ github.workspace }} ~/Arduino/libraries/IS31FL3733
+      
       - uses: arduino/compile-sketches@v1
         continue-on-error: true
         with:
@@ -85,8 +91,6 @@ jobs:
           sketch-paths: |
             examples/abm_arduino
             examples/rgb_matrix_arduino
-          libraries: |
-            .
 
   clang-format:
     runs-on: ubuntu-latest
@@ -120,6 +124,8 @@ jobs:
 
       - name: Set up Python
         uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
 
       - name: Install PlatformIO
         run: |
