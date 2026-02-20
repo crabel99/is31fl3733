@@ -20,7 +20,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 
-#include "is31fl3733.hpp"
+#include <is31fl3733.hpp>
 
 using namespace IS31FL3733;
 

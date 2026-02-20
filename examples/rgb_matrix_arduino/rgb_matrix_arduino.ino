@@ -16,7 +16,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 
-#include "is31fl3733_rgb_matrix.hpp"
+#include <is31fl3733_rgb_matrix.hpp>
 
 using namespace IS31FL3733;
 
