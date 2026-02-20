@@ -11,7 +11,7 @@
  *
  *  Asynchronous DMA-driven IS31FL3733 driver implementation.
  *
- *  See is31fl3733_async.hpp and /docs/ASYNC_DMA_ARCHITECTURE.md for details.
+ *  See is31fl3733.hpp and /docs/ASYNC_DMA_ARCHITECTURE.md for details.
  *--------------------------------------------------------------------------------------------*/
 
 #include "is31fl3733.hpp"
