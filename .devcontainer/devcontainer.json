@@ -16,7 +16,5 @@
   },
   "forwardPorts": [8008],
   "mounts": ["source=/dev,target=/dev,type=bind,consistency=consistent"],
-  "remoteUser": "vscode",
-  "workspaceFolder": "/home/vscode/Documents/PlatformIO/Projects",
-  "workspaceMount": "type=bind,source=${localWorkspaceFolder},target=${containerWorkspaceFolder}"
+  "remoteUser": "vscode"
 }
