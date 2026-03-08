@@ -344,6 +344,20 @@ class IS31FL3733 {
     /// @brief Set interrupt mask register (Common IMR).
     /// @param imrMask IMR bitmask (IMR_IO/IMR_IS/IMR_IAB/IMR_IAC).
     void SetIMR(uint8_t imrMask);
+
+    /// @brief Control whether LEDSHORT bits are applied when computing LEDONOFF mask.
+    ///
+    /// Some boards can report persistent short false-positives on specific channels during
+    /// OSD. When disabled, only LEDOPEN contributes to LEDONOFF masking.
+    /// @param enable True to mask shorts and opens, false to mask opens only.
+    void SetShortFaultMaskEnabled(bool enable) {
+        _maskShortFaults = enable;
+    }
+
+    /// @brief Returns true when LEDSHORT contributes to LEDONOFF masking.
+    bool GetShortFaultMaskEnabled() const {
+        return _maskShortFaults;
+    }
     /** @} */
 
     // ---------------------------------------------------------------------------------------
@@ -361,6 +375,16 @@ class IS31FL3733 {
     /// @param row Hardware row (1..12 = SW1..SW12).
     /// @param pwmValues Array of 16 PWM values.
     void SetRowPWM(uint8_t row, const uint8_t *pwmValues);
+
+    /// @brief Begin a batched PWM update.
+    ///
+    /// While active, PWM row writes are staged in the internal matrix and queued,
+    /// but transmission to the device is deferred until EndPwmBatch() is called.
+    void BeginPwmBatch();
+
+    /// @brief End a batched PWM update and optionally flush queued rows.
+    /// @param flush If true, starts sending queued rows immediately (if bus is idle).
+    void EndPwmBatch(bool flush = true);
 
     /// @brief Set mode for a single LED (hardware coordinates, Page 2).
     /// @param row Hardware row (1..12 = SW1..SW12).
@@ -474,6 +498,12 @@ class IS31FL3733 {
     const uint8_t *GetLEDShort() const {
         return _ledShort;
     }
+
+    /// @brief Get the cached LED on/off mask (last value written to LEDONOFF).
+    /// @return Pointer to 24-byte array (Page 0, 0x00..0x17).
+    const uint8_t *GetLEDOn() const {
+        return _ledOn;
+    }
     /** @} */
 
 #ifndef TEST_NATIVE
@@ -503,10 +533,11 @@ class IS31FL3733 {
     SercomTxn _pwmTxn;                      ///< Single in-flight PWM transaction descriptor
     uint8_t _pwmTxPtr[kHardwareCols + 1];   ///< Shadow buffer for current transaction
 
-    RingBufferN<kHardwareRows> _pwmPendingRows; ///< Ring buffer of row indices to write
+    RingBufferN<kHardwareRows + 1> _pwmPendingRows; ///< Effective capacity: kHardwareRows
     uint16_t _pwmEnqueued; ///< Bitfield tracking enqueued rows (0x0001..0x0FFF)
 
-    bool _pwmLocked; ///< True when command chain has preempted PWM
+    bool _pwmLocked;      ///< True when command chain has preempted PWM
+    bool _pwmBatchActive; ///< True while staged PWM updates are being batched
     /** @} */
 
     // ---------------------------------------------------------------------------------------
@@ -519,7 +550,7 @@ class IS31FL3733 {
     SercomTxn _abmTxn;                      ///< Single in-flight ABM transaction descriptor
     uint8_t _abmTxPtr[kHardwareCols + 1];   ///< Shadow buffer for current transaction
 
-    RingBufferN<kHardwareRows> _abmPendingRows; ///< Ring buffer of row indices to write
+    RingBufferN<kHardwareRows + 1> _abmPendingRows; ///< Effective capacity: kHardwareRows
     uint16_t _abmEnqueued; ///< Bitfield tracking enqueued rows (0x0001..0x0FFF)
 
     bool _abmLocked; ///< True when command chain has preempted ABM
@@ -578,6 +609,7 @@ class IS31FL3733 {
     /** @{ */
     uint8_t _crValue;       ///< Shadow of CR register state for runtime updates
     ColorOrder _colorOrder; ///< RGB pixel color order
+    bool _maskShortFaults;  ///< Include LEDSHORT bits in computed LEDONOFF mask
     /** @} */
 
     // ---------------------------------------------------------------------------------------
@@ -660,14 +692,24 @@ class IS31FL3733 {
 // =========================================================================================
 
 inline void IS31FL3733::_sendRowPWM() {
-    // Don't send if PWM is locked by command chain or if transaction already in-flight
-    if (_pwmLocked || _pwmTxn.txPtr)
+    // Don't send if PWM is locked, batch staging is active, or if transaction is in-flight
+    if (_pwmLocked || _pwmBatchActive || _pwmTxn.txPtr)
         return;
 
     // Dequeue next row
     int row = _pwmPendingRows.read_char();
+    if (row < 0) {
+        // Queue can be full with one row represented only in _pwmEnqueued.
+        for (uint8_t candidate = 0; candidate < kHardwareRows; candidate++) {
+            if (_pwmEnqueued & (1u << candidate)) {
+                row = candidate;
+                break;
+            }
+        }
+    }
+
     if (row < 0)
-        return; // Nothing to send
+        return; // Nothing pending
 
     // Clear enqueued bit
     _pwmEnqueued &= ~(1 << row);
@@ -691,8 +733,18 @@ inline void IS31FL3733::_sendRowMode() {
 
     // Dequeue next row
     int row = _abmPendingRows.read_char();
+    if (row < 0) {
+        // Queue can be full with one row represented only in _abmEnqueued.
+        for (uint8_t candidate = 0; candidate < kHardwareRows; candidate++) {
+            if (_abmEnqueued & (1u << candidate)) {
+                row = candidate;
+                break;
+            }
+        }
+    }
+
     if (row < 0)
-        return; // Nothing to send
+        return; // Nothing pending
 
     // Clear enqueued bit
     _abmEnqueued &= ~(1 << row);
@@ -826,11 +878,14 @@ inline void IS31FL3733::_onServiceCallback(void *user, int status) {
             _abm3CallbackWrapper();
     }
 
-    // Check for open/short faults (bits 0-1)
-    if (isr & 0x3) { // OB (0x01) or SB (0x02)
+    const bool hasOpenFault = (isr & ISR_OB) != 0;
+    const bool hasShortFault = ((isr & ISR_SB) != 0) && self->_maskShortFaults;
+
+    // Service open faults always; service short faults only when short masking is enabled.
+    if (hasOpenFault || hasShortFault) {
         // Determine which fault register to read
-        uint16_t pagereg = (isr & ISR_OB) ? LEDOPEN : LEDSHORT;
-        uint8_t *dest = (isr & ISR_OB) ? self->_ledOpen : self->_ledShort;
+        uint16_t pagereg = hasOpenFault ? LEDOPEN : LEDSHORT;
+        uint8_t *dest = hasOpenFault ? self->_ledOpen : self->_ledShort;
 
         // Read fault register asynchronously
         self->_asyncRead(pagereg, dest, 24, _osbCallback, self);

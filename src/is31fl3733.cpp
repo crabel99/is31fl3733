@@ -32,9 +32,10 @@ IS31FL3733 *IS31FL3733::_instance = nullptr;
 
 IS31FL3733::IS31FL3733(TwoWire *wire, uint8_t addr, uint8_t sdbPin, uint8_t irqPin)
     : _hw(wire ? wire->getSercom() : nullptr), _addr(addr), _sdbPin(sdbPin), _irqPin(irqPin),
-      _currentPage(0xFF), _pwmEnqueued(0), _pwmLocked(false), _abmEnqueued(0), _abmLocked(false),
-      _cmdReturn(0), _cmdError(0), _syncComplete(false), _syncStatus(0), _syncTargetCmd(-1),
-      _begun(false), _lastISR(0), _crValue(CR_SSD), _colorOrder(ColorOrder::GRB) {
+      _currentPage(0xFF), _pwmEnqueued(0), _pwmLocked(false), _pwmBatchActive(false),
+      _abmEnqueued(0), _abmLocked(false), _cmdReturn(0), _cmdError(0), _syncComplete(false),
+      _syncStatus(0), _syncTargetCmd(-1), _begun(false), _lastISR(0), _crValue(CR_SSD),
+      _colorOrder(ColorOrder::GRB), _maskShortFaults(true) {
 
     // Pre-stage unlock transaction and page buffers
     _crwlTx[0] = PSWL;
@@ -95,13 +96,13 @@ IS31FL3733::IS31FL3733(TwoWire *wire, uint8_t addr, uint8_t sdbPin, uint8_t irqP
     // set all LED's on by default (will be updated in begin()) after OSD reads if enabled
     memset(_ledOn, 0xFF, sizeof(_ledOn));
 
-    // Initialize PWM matrix: byte 0 = Page 1 row address (0x00..0x0B)
+    // Initialize row start-register addresses with 16-byte row stride:
+    // row0=0x00, row1=0x10, ... row11=0xB0
     for (uint8_t row = 0; row < kHardwareRows; row++)
-        _pwm_matrix[row][0] = row; // Page 1 Row Address Register
+        _pwm_matrix[row][0] = static_cast<uint8_t>(row * kHardwareCols);
 
-    // Initialize ABM matrix: byte 0 = Page 2 row address (0x00..0x0B)
     for (uint8_t row = 0; row < kHardwareRows; row++)
-        _abm_matrix[row][0] = row; // Page 2 Row Address Register
+        _abm_matrix[row][0] = static_cast<uint8_t>(row * kHardwareCols);
 }
 
 IS31FL3733::~IS31FL3733() {
@@ -126,12 +127,9 @@ bool IS31FL3733::begin(uint8_t pfs, uint8_t pur, uint8_t pdr) {
         delay(1);
     }
 
-    // IRQ pin (if provided)
-    if (_irqPin != 0xFF) {
-        pinMode(_irqPin, INPUT);
-        _instance = this; // Set static instance for ISR access
-        attachInterrupt(digitalPinToInterrupt(_irqPin), _irqCallback, FALLING);
-    }
+    // IRQ pin (if provided). Defer ISR attachment until initialization completes.
+    if (_irqPin != 0xFF)
+        pinMode(_irqPin, INPUT_PULLUP);
 
     // ---------------------------------------------------------------------------------
     // Software RESET
@@ -151,78 +149,73 @@ bool IS31FL3733::begin(uint8_t pfs, uint8_t pur, uint8_t pdr) {
     if (!_syncWrite(CR, &_crValue, 1))
         return false; // CR write failed
 
-    // PUR/PDR: Set pull-up/down for de-ghosting (default to all enabled)
+    // ---------------------------------------------------------------------------------
+    // Configure Page 0: LED On/Off and Open/Short Detection
+    // ---------------------------------------------------------------------------------
+    // Step 1: Enable all LEDs in LEDONOFF
+    if (!_syncWrite(LEDONOFF, _ledOn, 24))
+        return false; // LEDONOFF write failed
+
+    // Step 2: Set GCC to 0x01 for OSD
+    uint8_t gcc_osd = 0x01;
+    if (!_syncWrite(GCC, &gcc_osd, 1))
+        return false; // GCC write failed
+
+    // Step 3: Trigger OSD strobe (CR with OSD bit set)
+    uint8_t cr_osd = static_cast<uint8_t>(_crValue | CR_OSD);
+    if (!_syncWrite(CR, &cr_osd, 1))
+        return false; // CR OSD trigger failed
+
+    // Step 4: Wait for OSD to complete
+    delay(10); // 10ms to ensure completion
+
+    // Step 5: Read LEDOPEN and LEDSHORT registers
+    if (!_syncRead(LEDOPEN, _ledOpen, 24))
+        return false; // LEDOPEN read failed
+    if (!_syncRead(LEDSHORT, _ledShort, 24))
+        return false; // LEDSHORT read failed
+
+    // Store ISR for debug (read after OSD)
+    uint8_t isr_status = 0;
+    if (_syncRead((uint16_t)ISR << 8, &isr_status, 1))
+        _lastISR = isr_status;
+
+    // Compute LED On/Off mask based on configured fault policy.
+    for (size_t i = 0; i < 24; i++) {
+        const uint8_t shortMask = _maskShortFaults ? _ledShort[i] : 0u;
+        _ledOn[i] = static_cast<uint8_t>(_ledOn[i] & ~(_ledOpen[i] | shortMask));
+    }
+
+    // Write updated LEDONOFF mask (if faults detected)
+    if (!_syncWrite(LEDONOFF, _ledOn, 24))
+        return false; // LEDONOFF update failed
+
+    // Step 6: Restore GCC to normal operating value (0xFF)
+    uint8_t gcc_normal = 0xFF;
+    if (!_syncWrite(GCC, &gcc_normal, 1))
+        return false; // GCC restore failed
+
+    // Step 7: Clear CR OSD bit for normal operation
+    if (!_syncWrite(CR, &_crValue, 1))
+        return false; // CR clear OSD failed
+
+    // Step 8: Minimal OSD sequence (if IRQ pin provided)
+    if (_irqPin != 0xFF) {
+        // Step 8: Unmask interrupts for runtime fault detection
+        uint8_t imr_value = IMR_IO;
+        if (_maskShortFaults)
+            imr_value = static_cast<uint8_t>(imr_value | IMR_IS);
+        if (!_syncWrite((uint16_t)IMR << 8, &imr_value, 1))
+            return false; // IMR write failed
+    }
+
+    // Step 9: Set pull-up/down for de-ghosting (default to all enabled)
     uint8_t purValue = pur & 0b111; // Mask to 3 bits
     uint8_t pdrValue = pdr & 0b111; // Mask to 3 bits
     if (!_syncWrite(SWPUR, &purValue, 1))
         return false; // SWPUR write failed
     if (!_syncWrite(CSPDR, &pdrValue, 1))
         return false; // CSPDR write failed
-
-    // ---------------------------------------------------------------------------------
-    // Configure Page 0: LED On/Off and Open/Short Detection
-    // ---------------------------------------------------------------------------------
-
-    // Minimal OSD sequence (if IRQ pin provided)
-    if (_irqPin != 0xFF) {
-        // Step 1: Enable all LEDs in LEDONOFF
-        if (!_syncWrite(LEDONOFF, _ledOn, 24))
-            return false; // LEDONOFF write failed
-
-        // Step 2: Set GCC to 0x01 for OSD
-        uint8_t gcc_osd = 0x01;
-        if (!_syncWrite(GCC, &gcc_osd, 1))
-            return false; // GCC write failed
-
-        // Step 3: Trigger OSD strobe (CR with OSD bit set)
-        uint8_t cr_osd = static_cast<uint8_t>(_crValue | CR_OSD);
-        if (!_syncWrite(CR, &cr_osd, 1))
-            return false; // CR OSD trigger failed
-
-        // Step 4: Wait for OSD to complete
-        delay(10); // 10ms to ensure completion
-
-        // Step 5: Read LEDOPEN and LEDSHORT registers
-        if (!_syncRead(LEDOPEN, _ledOpen, 24))
-            return false; // LEDOPEN read failed
-        if (!_syncRead(LEDSHORT, _ledShort, 24))
-            return false; // LEDSHORT read failed
-
-        // Store ISR for debug (read after OSD)
-        uint8_t isr_status = 0;
-        if (_syncRead((uint16_t)ISR << 8, &isr_status, 1))
-            _lastISR = isr_status;
-
-        // Compute LED On/Off mask based on open/short status (turn off faulty LEDs)
-        for (size_t i = 0; i < 24; i++)
-            _ledOn[i] = _ledOn[i] & ~(_ledOpen[i] | _ledShort[i]);
-
-        // Write updated LEDONOFF mask (if faults detected)
-        if (!_syncWrite(LEDONOFF, _ledOn, 24))
-            return false; // LEDONOFF update failed
-
-        // Step 6: Restore GCC to normal operating value (0xFF)
-        uint8_t gcc_normal = 0xFF;
-        if (!_syncWrite(GCC, &gcc_normal, 1))
-            return false; // GCC restore failed
-
-        // Step 7: Clear CR OSD bit for normal operation
-        if (!_syncWrite(CR, &_crValue, 1))
-            return false; // CR clear OSD failed
-
-        // Step 8: Unmask interrupts for runtime fault detection
-        uint8_t imr_value = IMR_IO | IMR_IS;
-        if (!_syncWrite((uint16_t)IMR << 8, &imr_value, 1))
-            return false; // IMR write failed
-    } else {
-        // No IRQ - just write LEDONOFF and set GCC to normal
-        if (!_syncWrite(LEDONOFF, _ledOn, 24))
-            return false; // LEDONOFF write failed
-
-        uint8_t gcc_normal = 0xFF;
-        if (!_syncWrite(GCC, &gcc_normal, 1))
-            return false; // GCC write failed
-    }
 
     // ---------------------------------------------------------------------------------
     // Clear command transaction pointers and set default page to Page 1 (PWM)
@@ -235,11 +228,10 @@ bool IS31FL3733::begin(uint8_t pfs, uint8_t pur, uint8_t pdr) {
 
     _ensurePage(1);
 
-    // ---------------------------------------------------------------------------------
-    // Initialize PWM to zero for startup (async)
-    // ---------------------------------------------------------------------------------
-
-    Fill(0);
+    if (_irqPin != 0xFF) {
+        _instance = this; // Set static instance for ISR access
+        attachInterrupt(digitalPinToInterrupt(_irqPin), _irqCallback, FALLING);
+    }
 
     _begun = true;
 
@@ -329,8 +321,8 @@ void IS31FL3733::SetPixelPWM(uint8_t row, uint8_t col, uint8_t pwm) {
     if (_pwmEnqueued & rowBit)
         return; // Already enqueued
 
-    _pwmPendingRows.store_char(idx);
     _pwmEnqueued |= rowBit;
+    _pwmPendingRows.store(idx);
 
     // Kick transmission if not already in-flight
     if (!_pwmTxn.txPtr && !_pwmLocked)
@@ -354,11 +346,22 @@ void IS31FL3733::SetRowPWM(uint8_t row, const uint8_t *pwmValues) {
     if (_pwmEnqueued & rowBit)
         return; // Already enqueued
 
-    _pwmPendingRows.store_char(idx);
     _pwmEnqueued |= rowBit;
+    _pwmPendingRows.store(idx);
 
     // Kick transmission if not already in-flight
     if (!_pwmTxn.txPtr && !_pwmLocked)
+        _sendRowPWM();
+}
+
+void IS31FL3733::BeginPwmBatch() {
+    _pwmBatchActive = true;
+}
+
+void IS31FL3733::EndPwmBatch(bool flush) {
+    _pwmBatchActive = false;
+
+    if (flush && !_pwmTxn.txPtr && !_pwmLocked)
         _sendRowPWM();
 }
 
@@ -425,15 +428,14 @@ void IS31FL3733::Fill(uint8_t pwm) {
         // Enqueue row
         uint16_t rowBit = 1 << row;
         if (!(_pwmEnqueued & rowBit)) {
-            _pwmPendingRows.store_char(row);
             _pwmEnqueued |= rowBit;
+            _pwmPendingRows.store(row);
         }
     }
 
     // Kick transmission if not already in-flight
-    if (!_pwmTxn.txPtr && !_pwmLocked) {
+    if (!_pwmTxn.txPtr && !_pwmLocked)
         _sendRowPWM();
-    }
 }
 
 // =========================================================================================
@@ -456,8 +458,8 @@ void IS31FL3733::SetPixelMode(uint8_t row, uint8_t col, ABMMode mode) {
     if (_abmEnqueued & rowBit)
         return; // Already enqueued
 
-    _abmPendingRows.store_char(idx);
     _abmEnqueued |= rowBit;
+    _abmPendingRows.store(idx);
 
     // Kick transmission if not already in-flight
     if (!_abmTxn.txPtr && !_abmLocked)
@@ -481,8 +483,8 @@ void IS31FL3733::SetRowMode(uint8_t row, ABMMode mode) {
     if (_abmEnqueued & rowBit)
         return; // Already enqueued
 
-    _abmPendingRows.store_char(idx);
     _abmEnqueued |= rowBit;
+    _abmPendingRows.store(idx);
 
     // Kick transmission if not already in-flight
     if (!_abmTxn.txPtr && !_abmLocked)
@@ -497,8 +499,8 @@ void IS31FL3733::SetMatrixMode(ABMMode mode) {
         // Enqueue row
         uint16_t rowBit = 1 << row;
         if (!(_abmEnqueued & rowBit)) {
-            _abmPendingRows.store_char(row);
             _abmEnqueued |= rowBit;
+            _abmPendingRows.store(row);
         }
     }
 
@@ -698,9 +700,11 @@ void IS31FL3733::TriggerABM() {
 void IS31FL3733::_osbCallback(void *user, int status) {
     IS31FL3733 *self = (IS31FL3733 *)user;
 
-    // Update LED On/Off mask: disable faulty LEDs
-    for (size_t i = 0; i < 24; i++)
-        self->_ledOn[i] = self->_ledOn[i] & ~(self->_ledOpen[i] | self->_ledShort[i]);
+    // Update LED On/Off mask according to configured fault policy.
+    for (size_t i = 0; i < 24; i++) {
+        const uint8_t shortMask = self->_maskShortFaults ? self->_ledShort[i] : 0u;
+        self->_ledOn[i] = static_cast<uint8_t>(self->_ledOn[i] & ~(self->_ledOpen[i] | shortMask));
+    }
 
     // Write updated LED On/Off register
     self->_asyncWrite(LEDONOFF, self->_ledOn, 24, nullptr, nullptr);
