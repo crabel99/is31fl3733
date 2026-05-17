@@ -1,13 +1,16 @@
 {
   "editor.formatOnSave": true,
+  "editor.formatOnType": false,
   "editor.formatOnSaveMode": "file",
   "[cpp]": {
-    "editor.defaultFormatter": "ms-vscode.cpptools"
+    "editor.defaultFormatter": "xaver.clang-format",
+    "editor.formatOnSave": true
   },
   "[c]": {
-    "editor.defaultFormatter": "ms-vscode.cpptools"
+    "editor.defaultFormatter": "xaver.clang-format",
+    "editor.formatOnSave": true
   },
-  "C_Cpp.formatting": "clangFormat",
+  "C_Cpp.formatting": "disabled",
   "C_Cpp.clang_format_style": "file",
   "C_Cpp.errorSquiggles": "enabled",
   "C_Cpp.dimInactiveRegions": true,
@@ -16,5 +19,26 @@
     "-Wno-ignored-qualifiers",
     "-isystem${workspaceFolder}/../SimIO/SimIOFramework"
   ],
-  "platformio-ide.activateProjectOnTextEditorChange": false
+  "platformio-ide.activateProjectOnTextEditorChange": false,
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/.pio/**": true,
+    "**/.venv/**": true,
+    "**/.mypy_cache/**": true,
+    "**/html/search/**": true
+  },
+  "files.exclude": {
+    "**/.pio": true,
+    "**/.venv": true,
+    "**/.mypy_cache": true
+  },
+  "search.exclude": {
+    "**/.pio/**": true,
+    "**/.venv/**": true,
+    "**/.mypy_cache/**": true,
+    "**/html/search/**": true
+  },
+  "C_Cpp.codeAnalysis.runAutomatically": false,
+  "C_Cpp.workspaceParsingPriority": "low"
 }

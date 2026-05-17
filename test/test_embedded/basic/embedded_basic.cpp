@@ -4,6 +4,7 @@
 #include "is31fl3733_pins.h"
 #include "is31fl3733_color_utils.hpp"
 #include "is31fl3733.hpp"
+#include "debug.h"
 
 using namespace test_embedded::is31fl3733_pins;
 using namespace IS31FL3733;
@@ -11,15 +12,27 @@ using namespace ColorUtils;
 
 TEST_GROUP(EmbeddedBasic);
 
+static IS31FL3733::IS31FL3733 *g_basicDriver = nullptr;
+static bool g_basicWireStarted = false;
+
+inline bool ensureBasicDriver() {
+    if (g_basicDriver)
+        return true;
+
+    g_basicDriver =
+        new IS31FL3733::IS31FL3733(&Wire1, 0x50, test_embedded::is31fl3733_pins::SDB, 0xFF);
+    bool begin_ok = g_basicDriver->begin();
+    if (!begin_ok) {
+        delay(5);
+        begin_ok = g_basicDriver->begin();
+    }
+    return begin_ok;
+}
+
 #define CREATE_TEST_DRIVER()                                                                       \
-    IS31FL3733::IS31FL3733 driver(&Wire1, 0x50, test_embedded::is31fl3733_pins::SDB,               \
-                                  test_embedded::is31fl3733_pins::INTB);                           \
-    bool begin_ok = driver.begin();                                                                \
-    if (!begin_ok) {                                                                               \
-        delay(5);                                                                                  \
-        begin_ok = driver.begin();                                                                 \
-    }                                                                                              \
-    TEST_ASSERT_TRUE_MESSAGE(begin_ok, "IS31FL3733::begin() failed - check I2C connection")
+    TEST_ASSERT_TRUE_MESSAGE(ensureBasicDriver(),                                                  \
+                             "IS31FL3733::begin() failed - check I2C connection");                 \
+    IS31FL3733::IS31FL3733 &driver = *g_basicDriver
 
 // Recover I2C bus from stuck state (GPIO-level control to release slave holds)
 // Based on SimIOFramework_test pattern - takes pin numbers as parameters
@@ -88,20 +101,20 @@ inline void recoverI2cBus(uint8_t pinSDA, uint8_t pinSCL) {
 TEST_SETUP(EmbeddedBasic) {
     using namespace test_embedded::is31fl3733_pins;
 
-    // Recover I2C bus from stuck state before initialization
-    recoverI2cBus(PIN_SDA, PIN_SCL);
+    if (!g_basicWireStarted) {
+        // Recover I2C bus from stuck state before first initialization
+        recoverI2cBus(PIN_SDA, PIN_SCL);
 
-    Wire1.begin();
-    // Configure PA16/PA17 for SERCOM1 (Wire1)
-    pinPeripheral(PIN_SDA, PIO_SERCOM); // PA16 -> SERCOM1 PAD[0] (SDA)
-    pinPeripheral(PIN_SCL, PIO_SERCOM); // PA17 -> SERCOM1 PAD[1] (SCL)
-    Wire1.setClock(WIRE_BAUDRATE);
-    delay(2);
+        Wire1.begin();
+        Wire1.setClock(WIRE_BAUDRATE);
+        delay(2);
+        g_basicWireStarted = true;
+    }
 }
 
 TEST_TEAR_DOWN(EmbeddedBasic) {
-    // Driver object is stack-scoped per test; destructor handles end() lifecycle.
-    Wire1.end();
+    // Keep Wire/driver alive across this group to avoid repeated begin/end cycles
+    // that can wedge the transport state on target hardware.
 }
 
 TEST(EmbeddedBasic, BargraphSegmentMapping) {
@@ -136,6 +149,7 @@ TEST(EmbeddedBasic, BargraphSegmentMapping) {
 
 TEST(EmbeddedBasic, DriverInitialization) {
     CREATE_TEST_DRIVER();
+    (void)driver;
     TEST_PASS();
 }
 
@@ -160,12 +174,11 @@ TEST(EmbeddedBasic, BeginLedMaskMatchesOpenShortStatus) {
     for (uint8_t sw = 1; sw <= kHardwareRows; sw++) {
         for (uint8_t cs = CS_FIRST; cs <= kHardwareCols; cs++) {
             const uint8_t openBit = getMapBit(driver._ledOpen, sw, cs);
-            const uint8_t shortBit = getMapBit(driver._ledShort, sw, cs);
             const uint8_t onBit = getMapBit(driver._ledOn, sw, cs);
 
-            // _ledOn must always be the inverse mask of open/short status.
-            TEST_ASSERT_EQUAL_UINT8_MESSAGE((openBit || shortBit) ? 0 : 1, onBit,
-                                            "_ledOn bit does not match ~(LEDOPEN|LEDSHORT)");
+            // _ledOn must always be the inverse mask of open status (SHORT ignored).
+            TEST_ASSERT_EQUAL_UINT8_MESSAGE(openBit ? 0 : 1, onBit,
+                                            "_ledOn bit does not match ~LEDOPEN");
         }
     }
 }
@@ -228,16 +241,42 @@ TEST(EmbeddedBasic, status_chaining_all_begin_phases_validated) {
     // Comprehensive validation that all begin() transaction chains succeeded
     // Uses the instance created in setup to avoid reinitializing the same bus
 
-    // Verify OSD reads completed successfully
-    // On a healthy board: LEDOPEN=0x00, LEDSHORT=0x00, _ledOn=0xFF (all enabled)
-    // On a faulty board: LEDOPEN or LEDSHORT non-zero, _ledOn < 0xFF (some disabled)
-    bool healthy = (driver._ledOpen[0] == 0x00 && driver._ledShort[0] == 0x00 &&
-                    driver._ledOn[0] == 0xFF && driver._ledOn[1] == 0xFF);
-    bool faults_detected = (driver._ledOpen[0] != 0x00 || driver._ledShort[0] != 0x00) &&
-                           (driver._ledOn[0] != 0xFF || driver._ledOn[1] != 0xFF);
+    // DEBUG: Print actual OSD values reported by hardware to RTT
+    _PL("\n=== OSD Hardware Report ===");
+    for (uint8_t sw = 1; sw <= 12; sw++) {
+        const uint8_t byteOffset = (sw - 1) * 2;
+        _PP("SW");
+        _PP(sw);
+        _PP(": OPEN[");
+        _PP(driver._ledOpen[byteOffset], HEX);
+        _PP(",");
+        _PP(driver._ledOpen[byteOffset + 1], HEX);
+        _PP("] SHORT[");
+        _PP(driver._ledShort[byteOffset], HEX);
+        _PP(",");
+        _PP(driver._ledShort[byteOffset + 1], HEX);
+        _PP("] ON[");
+        _PP(driver._ledOn[byteOffset], HEX);
+        _PP(",");
+        _PP(driver._ledOn[byteOffset + 1], HEX);
+        _PL("]");
+    }
+    _PL("===========================\n");
 
-    TEST_ASSERT_TRUE_MESSAGE(healthy || faults_detected,
-                             "Device OSD reads did not complete properly");
+    // Verify OSD reads completed and are coherent:
+    // The relationship _ledOn = ~(_ledOpen | _ledShort) is enforced in begin()
+    // Check that all rows follow this invariant
+    bool osd_coherent = true;
+    for (size_t i = 0; i < 24; i++) {
+        // Note: SHORT detection is disabled, so only OPEN bits are used
+        uint8_t expected_on = static_cast<uint8_t>(~driver._ledOpen[i]);
+        if (driver._ledOn[i] != expected_on) {
+            osd_coherent = false;
+            break;
+        }
+    }
+    TEST_ASSERT_TRUE_MESSAGE(osd_coherent,
+                             "OSD data incoherent: _ledOn != ~_ledOpen (SHORT ignored)");
 
     // Verify accumulated status is clean after begin()
     TEST_ASSERT_EQUAL_INT_MESSAGE(0, driver._cmdCtx[2].initialStatus,

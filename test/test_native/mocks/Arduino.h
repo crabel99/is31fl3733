@@ -24,6 +24,10 @@
 #define FALLING 0x2
 #endif
 
+#ifndef INPUT_PULLUP
+#define INPUT_PULLUP 0x2
+#endif
+
 extern int g_pinModeCalls;
 extern int g_digitalWriteCalls;
 extern int g_attachInterruptCalls;
@@ -82,4 +86,12 @@ inline void delay(unsigned long) {
 
 inline unsigned long millis() {
     return g_mockMillis++;
+}
+
+inline unsigned long micros() {
+    return g_mockMillis++ * 1000;
+}
+
+inline void yield() {
+    // No-op for native tests
 }

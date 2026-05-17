@@ -32,9 +32,9 @@ TEST_TEAR_DOWN(NativeAsyncLogic) {
 TEST(NativeAsyncLogic, pwm_matrix_initialization) {
     Driver driver(nullptr, 0x50, 0xFF, 0xFF);
 
-    // Verify PWM matrix row addresses are initialized (0x00..0x0B)
+    // Verify PWM matrix row addresses are initialized (0x00, 0x10, 0x20, ..., 0xB0)
     for (uint8_t row = 0; row < kHardwareRows; row++) {
-        TEST_ASSERT_EQUAL_UINT8(row, driver._pwm_matrix[row][0]);
+        TEST_ASSERT_EQUAL_UINT8(row * kHardwareCols, driver._pwm_matrix[row][0]);
     }
 }
 

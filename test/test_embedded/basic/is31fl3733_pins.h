@@ -2,30 +2,27 @@
 
 #include <Arduino.h>
 #include <Wire.h>
+#include <wiring_private.h>
 
 #include "is31fl3733_color_utils.hpp"
 
-// Manually create Wire1 on SERCOM1 with PA16 (SDA), PA17 (SCL)
-// This allows hardware-specific I2C configuration independent of board variant
-#ifndef NATIVE_TEST
-static TwoWire Wire1(&sercom1, 16, 17); // PA16, PA17
-#endif
+// Wire1 is pre-defined by the SimIO Device M0 variant on SERCOM1 (PA16/PA17).
+// No manual TwoWire construction needed.
 
 namespace test_embedded {
 namespace is31fl3733_pins {
-// Pin mappings for test hardware
-// ⚠️  ADJUST THESE TO MATCH YOUR ACTUAL HARDWARE WIRING
-// Example hardware: Adafruit Feather M0 with IS31FL3733 breakout
-// - INTB (interrupt): D11 → PA16
-// - SDB (shutdown):   D12 → PA19
-// Note: These differ from SimIO M0 (PA22/PA23) as those pins are not available on Feather M0
-constexpr uint8_t INTB = 11; // IRQ pin - any available GPIO
-constexpr uint8_t SDB = 12;  // Shutdown pin - any available GPIO
+// Pin mappings aligned with SimIODevice trim-wheel board map
+// (`src/SimIO/SimIODevice/include/boards/trim_wheel.h`):
+// - INTB (interrupt): D34 → PA14
+// - SDB (shutdown):   D36 → PA27
+// - SDA: D18 → PA16 (Wire1, SERCOM1 PAD[0])
+// - SCL: D19 → PA17 (Wire1, SERCOM1 PAD[1])
+constexpr uint8_t INTB = 34; // PA14, Arduino pin 34
+constexpr uint8_t SDB = 36;  // PA27, Arduino pin 36
 
-// I2C on SERCOM1: PA16 (physical pin 16), PA17 (physical pin 17)
-// Note: Pin numbers are PA port numbers, not Arduino D numbers
-constexpr uint8_t PIN_SDA = 16; // PA16
-constexpr uint8_t PIN_SCL = 17; // PA17
+// Wire1 SDA/SCL pin numbers (Arduino indices matching PIN_WIRE1_SDA/SCL in variant)
+constexpr uint8_t PIN_SDA = PIN_WIRE1_SDA; // 18 → PA16
+constexpr uint8_t PIN_SCL = PIN_WIRE1_SCL; // 19 → PA17
 constexpr uint32_t WIRE_BAUDRATE = 400000UL;
 static TwoWire &WIRE = Wire1;
 
@@ -78,14 +75,14 @@ inline SegmentAddressPair SegmentToPair(uint8_t segment) {
 
 // SERCOM1 interrupt handler for Wire1
 // Required when manually creating TwoWire object with custom SERCOM
-#ifndef NATIVE_TEST
-#ifdef __cplusplus
-extern "C" {
-#endif
-void SERCOM1_Handler(void) {
-	Wire1.onService();
-}
-#ifdef __cplusplus
-}
-#endif
-#endif // NATIVE_TEST
+// #ifndef NATIVE_TEST
+// #ifdef __cplusplus
+// extern "C" {
+// #endif
+// void SERCOM1_Handler(void) {
+//     Wire1.onService();
+// }
+// #ifdef __cplusplus
+// }
+// #endif
+// #endif // NATIVE_TEST

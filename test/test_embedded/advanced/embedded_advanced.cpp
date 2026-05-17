@@ -11,6 +11,23 @@ using namespace ColorUtils;
 
 TEST_GROUP(EmbeddedAdvanced);
 
+static IS31FL3733::IS31FL3733 *g_advancedDriver = nullptr;
+static bool g_advancedWireStarted = false;
+
+inline bool ensureAdvancedDriver() {
+    if (g_advancedDriver)
+        return true;
+
+    g_advancedDriver = new IS31FL3733::IS31FL3733(&test_embedded::is31fl3733_pins::WIRE, 0x50,
+                                                  test_embedded::is31fl3733_pins::SDB, 0xFF);
+    bool begin_ok = g_advancedDriver->begin();
+    if (!begin_ok) {
+        delay(5);
+        begin_ok = g_advancedDriver->begin();
+    }
+    return begin_ok;
+}
+
 // Recover I2C bus from stuck state (GPIO-level control to release slave holds)
 // Based on SimIOFramework_test pattern - takes pin numbers as parameters
 inline void recoverI2cBus(uint8_t pinSDA, uint8_t pinSCL) {
@@ -76,34 +93,26 @@ inline void recoverI2cBus(uint8_t pinSDA, uint8_t pinSCL) {
 }
 
 #define CREATE_TEST_DRIVER()                                                                       \
-    IS31FL3733::IS31FL3733 driver(&test_embedded::is31fl3733_pins::WIRE, 0x50,                     \
-                                  test_embedded::is31fl3733_pins::SDB,                             \
-                                  test_embedded::is31fl3733_pins::INTB);                           \
-    bool begin_ok = driver.begin();                                                                \
-    if (!begin_ok) {                                                                               \
-        delay(5);                                                                                  \
-        begin_ok = driver.begin();                                                                 \
-    }                                                                                              \
-    TEST_ASSERT_TRUE_MESSAGE(begin_ok, "IS31FL3733::begin() failed")
+    TEST_ASSERT_TRUE_MESSAGE(ensureAdvancedDriver(), "IS31FL3733::begin() failed");                \
+    IS31FL3733::IS31FL3733 &driver = *g_advancedDriver
 
 TEST_SETUP(EmbeddedAdvanced) {
     using namespace test_embedded::is31fl3733_pins;
 
-    // Recover I2C bus from stuck state before initialization
-    recoverI2cBus(PIN_SDA, PIN_SCL);
+    if (!g_advancedWireStarted) {
+        // Recover I2C bus from stuck state before first initialization
+        recoverI2cBus(PIN_SDA, PIN_SCL);
 
-    WIRE.begin();
-    // Configure PA16/PA17 for SERCOM1 (Wire1)
-    pinPeripheral(PIN_SDA, PIO_SERCOM); // PA16 -> SERCOM1 PAD[0] (SDA)
-    pinPeripheral(PIN_SCL, PIO_SERCOM); // PA17 -> SERCOM1 PAD[1] (SCL)
-    WIRE.setClock(WIRE_BAUDRATE);
-    delay(2);
+        WIRE.begin();
+        WIRE.setClock(WIRE_BAUDRATE);
+        delay(2);
+        g_advancedWireStarted = true;
+    }
 }
 
 TEST_TEAR_DOWN(EmbeddedAdvanced) {
-    using namespace test_embedded::is31fl3733_pins;
-    // Driver object is stack-scoped per test; destructor handles end() lifecycle.
-    WIRE.end();
+    // Keep Wire/driver alive across this group to avoid repeated begin/end cycles
+    // that can wedge the transport state on target hardware.
 }
 
 // =========================================================================================

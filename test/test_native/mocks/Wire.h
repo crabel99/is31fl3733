@@ -96,6 +96,10 @@ template <size_t N> class RingBufferN {
         return value;
     }
 
+    bool store(uint8_t value) {
+        return store_char(value);
+    }
+
     bool store_char(uint8_t value) {
         if (_count == N) {
             return false;
