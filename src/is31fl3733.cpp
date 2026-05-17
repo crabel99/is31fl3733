@@ -35,7 +35,7 @@ IS31FL3733::IS31FL3733(TwoWire *wire, uint8_t addr, uint8_t sdbPin, uint8_t irqP
       _currentPage(0xFF), _pwmEnqueued(0), _pwmLocked(false), _pwmBatchActive(false),
       _abmEnqueued(0), _abmLocked(false), _cmdReturn(0), _cmdError(0), _syncComplete(false),
       _syncStatus(0), _syncTargetCmd(-1), _begun(false), _lastISR(0), _crValue(CR_SSD),
-      _colorOrder(ColorOrder::GRB), _maskShortFaults(true) {
+      _colorOrder(ColorOrder::GRB), _maskShortFaults(false) {
 
     // Pre-stage unlock transaction and page buffers
     _crwlTx[0] = PSWL;
@@ -51,6 +51,7 @@ IS31FL3733::IS31FL3733(TwoWire *wire, uint8_t addr, uint8_t sdbPin, uint8_t irqP
     _cmdCtx[0] = {this, 0, nullptr, nullptr};
     _cmdTxn[0].onComplete = _cmdCallback;
     _cmdTxn[0].user = &_cmdCtx[0];
+    _cmdTxn[0].chainNext = false;
 
     // Page Selection Txn
     _cmdTxn[1].config = I2C_CFG_STOP;
@@ -60,6 +61,7 @@ IS31FL3733::IS31FL3733(TwoWire *wire, uint8_t addr, uint8_t sdbPin, uint8_t irqP
     _cmdCtx[1] = {this, 1, nullptr, nullptr};
     _cmdTxn[1].onComplete = _cmdCallback;
     _cmdTxn[1].user = &_cmdCtx[1];
+    _cmdTxn[1].chainNext = false;
 
     // Command Write Txn
     _cmdTxn[2].config = I2C_CFG_STOP;
@@ -68,6 +70,7 @@ IS31FL3733::IS31FL3733(TwoWire *wire, uint8_t addr, uint8_t sdbPin, uint8_t irqP
     _cmdCtx[2] = {this, 2, nullptr, nullptr};
     _cmdTxn[2].onComplete = _cmdCallback;
     _cmdTxn[2].user = &_cmdCtx[2];
+    _cmdTxn[2].chainNext = false;
 
     // Command Read Txn
     _cmdTxn[3].config = I2C_CFG_READ | I2C_CFG_STOP;
@@ -76,6 +79,7 @@ IS31FL3733::IS31FL3733(TwoWire *wire, uint8_t addr, uint8_t sdbPin, uint8_t irqP
     _cmdCtx[3] = {this, 3, nullptr, nullptr};
     _cmdTxn[3].onComplete = _cmdCallback;
     _cmdTxn[3].user = &_cmdCtx[3];
+    _cmdTxn[3].chainNext = false;
 
     // PWM Txn
     _pwmTxn.config = I2C_CFG_STOP;
@@ -84,6 +88,7 @@ IS31FL3733::IS31FL3733(TwoWire *wire, uint8_t addr, uint8_t sdbPin, uint8_t irqP
     _pwmTxn.txPtr = nullptr;
     _pwmTxn.onComplete = _txnCallback;
     _pwmTxn.user = this;
+    _pwmTxn.chainNext = false;
 
     // ABM Txn
     _abmTxn.config = I2C_CFG_STOP;
@@ -92,6 +97,7 @@ IS31FL3733::IS31FL3733(TwoWire *wire, uint8_t addr, uint8_t sdbPin, uint8_t irqP
     _abmTxn.txPtr = nullptr;
     _abmTxn.onComplete = _txnModeCallback;
     _abmTxn.user = this;
+    _abmTxn.chainNext = false;
 
     // set all LED's on by default (will be updated in begin()) after OSD reads if enabled
     memset(_ledOn, 0xFF, sizeof(_ledOn));
@@ -132,13 +138,14 @@ bool IS31FL3733::begin(uint8_t pfs, uint8_t pur, uint8_t pdr) {
         pinMode(_irqPin, INPUT_PULLUP);
 
     // ---------------------------------------------------------------------------------
-    // Software RESET
+    // Force software RESET
     // ---------------------------------------------------------------------------------
 
-    // Read RESET register to trigger software reset (puts all registers in known state)
+    // Reading RESET triggers the IS31FL3733 software reset.
     uint8_t dummy;
     if (!_syncRead(RESET, &dummy, 1))
-        return false; // RESET read failed
+        return false;
+    delay(1);
 
     // ---------------------------------------------------------------------------------
     // Configure Page 3 registers
@@ -147,75 +154,89 @@ bool IS31FL3733::begin(uint8_t pfs, uint8_t pur, uint8_t pdr) {
     // CR: Normal operation (without OSD initially)
     _crValue = static_cast<uint8_t>(CR_SSD | CR_PFS(pfs & 0x03));
     if (!_syncWrite(CR, &_crValue, 1))
-        return false; // CR write failed
+        return false;
 
     // ---------------------------------------------------------------------------------
     // Configure Page 0: LED On/Off and Open/Short Detection
     // ---------------------------------------------------------------------------------
     // Step 1: Enable all LEDs in LEDONOFF
     if (!_syncWrite(LEDONOFF, _ledOn, 24))
-        return false; // LEDONOFF write failed
+        return false;
 
     // Step 2: Set GCC to 0x01 for OSD
     uint8_t gcc_osd = 0x01;
     if (!_syncWrite(GCC, &gcc_osd, 1))
-        return false; // GCC write failed
+        return false;
 
     // Step 3: Trigger OSD strobe (CR with OSD bit set)
     uint8_t cr_osd = static_cast<uint8_t>(_crValue | CR_OSD);
     if (!_syncWrite(CR, &cr_osd, 1))
-        return false; // CR OSD trigger failed
+        return false;
 
     // Step 4: Wait for OSD to complete
     delay(10); // 10ms to ensure completion
 
     // Step 5: Read LEDOPEN and LEDSHORT registers
     if (!_syncRead(LEDOPEN, _ledOpen, 24))
-        return false; // LEDOPEN read failed
+        return false;
     if (!_syncRead(LEDSHORT, _ledShort, 24))
-        return false; // LEDSHORT read failed
+        return false;
 
-    // Store ISR for debug (read after OSD)
+    // Store ISR status read after OSD.
     uint8_t isr_status = 0;
     if (_syncRead((uint16_t)ISR << 8, &isr_status, 1))
         _lastISR = isr_status;
 
     // Compute LED On/Off mask based on configured fault policy.
+    // NOTE: Short circuit detection disabled due to spurious shorts detected on
+    // red LED rows during OSD sequence. Only OPEN detection is used to disable LEDs.
     for (size_t i = 0; i < 24; i++) {
-        const uint8_t shortMask = _maskShortFaults ? _ledShort[i] : 0u;
-        _ledOn[i] = static_cast<uint8_t>(_ledOn[i] & ~(_ledOpen[i] | shortMask));
+        // Only disable LEDs if they are detected as open (not shorted)
+        _ledOn[i] = static_cast<uint8_t>(_ledOn[i] & ~_ledOpen[i]);
     }
 
     // Write updated LEDONOFF mask (if faults detected)
     if (!_syncWrite(LEDONOFF, _ledOn, 24))
-        return false; // LEDONOFF update failed
+        return false;
 
     // Step 6: Restore GCC to normal operating value (0xFF)
     uint8_t gcc_normal = 0xFF;
     if (!_syncWrite(GCC, &gcc_normal, 1))
-        return false; // GCC restore failed
+        return false;
 
     // Step 7: Clear CR OSD bit for normal operation
     if (!_syncWrite(CR, &_crValue, 1))
-        return false; // CR clear OSD failed
+        return false;
 
-    // Step 8: Minimal OSD sequence (if IRQ pin provided)
+    // Step 8: Force all LED mode registers to normal PWM mode.  RESET should leave
+    // Page 2 at 0x00, but write it explicitly during begin so no previous ABM state
+    // can survive a partial init or bus fault.
+    uint8_t pwmMode[kHardwareCols];
+    memset(pwmMode, static_cast<uint8_t>(ABMMode::PWM_MODE), sizeof(pwmMode));
+    for (uint8_t row = 0u; row < kHardwareRows; ++row) {
+        if (!_syncWrite(static_cast<uint16_t>(LEDABM + (row * kHardwareCols)), pwmMode,
+                        sizeof(pwmMode)))
+            return false;
+        memset(_abm_matrix[row] + 1, static_cast<uint8_t>(ABMMode::PWM_MODE), kHardwareCols);
+    }
+
+    // Step 9: Minimal OSD sequence (if IRQ pin provided)
     if (_irqPin != 0xFF) {
-        // Step 8: Unmask interrupts for runtime fault detection
+        // Unmask interrupts for runtime fault detection.
         uint8_t imr_value = IMR_IO;
         if (_maskShortFaults)
             imr_value = static_cast<uint8_t>(imr_value | IMR_IS);
         if (!_syncWrite((uint16_t)IMR << 8, &imr_value, 1))
-            return false; // IMR write failed
+            return false;
     }
 
-    // Step 9: Set pull-up/down for de-ghosting (default to all enabled)
+    // Step 10: Set pull-up/down for de-ghosting (default to all enabled)
     uint8_t purValue = pur & 0b111; // Mask to 3 bits
     uint8_t pdrValue = pdr & 0b111; // Mask to 3 bits
     if (!_syncWrite(SWPUR, &purValue, 1))
-        return false; // SWPUR write failed
+        return false;
     if (!_syncWrite(CSPDR, &pdrValue, 1))
-        return false; // CSPDR write failed
+        return false;
 
     // ---------------------------------------------------------------------------------
     // Clear command transaction pointers and set default page to Page 1 (PWM)
@@ -550,11 +571,13 @@ void IS31FL3733::_ensurePage(uint8_t page) {
         return;
 
     // Enqueue unlock transaction (pre-staged in constructor)
+    _cmdTxn[0].chainNext = false;
     _hw->enqueueWIRE(&_cmdTxn[0]);
 
     // Update and enqueue page select transaction
     _pgSelTx[0] = PSR;
     _pgSelTx[1] = page & 0b11; // Mask to 2 bits (0-3)
+    _cmdTxn[1].chainNext = false;
     _hw->enqueueWIRE(&_cmdTxn[1]);
 
     // Update tracked page
@@ -577,9 +600,11 @@ bool IS31FL3733::_syncWrite(uint16_t pagereg, const uint8_t *data, uint8_t len) 
 
     _asyncWrite(pagereg, data, len, nullptr, nullptr);
 
-    const unsigned long start = millis();
-    while (!_syncComplete && (millis() - start < 100ul))
-        ; // Spin until complete or timeout
+    constexpr uint32_t timeoutUs = 100000ul; // 100 ms
+    const uint32_t start = micros();
+    while (!_syncComplete && (static_cast<uint32_t>(micros() - start) < timeoutUs)) {
+        yield();
+    }
 
     if (!_syncComplete) {
         _syncStatus = -1;
@@ -601,9 +626,11 @@ bool IS31FL3733::_syncRead(uint16_t pagereg, uint8_t *dest, uint8_t len) {
 
     _asyncRead(pagereg, dest, len, nullptr, nullptr);
 
-    const unsigned long start = millis();
-    while (!_syncComplete && (millis() - start < 100ul))
-        ; // Spin until complete or timeout
+    constexpr uint32_t timeoutUs = 100000ul; // 100 ms
+    const uint32_t start = micros();
+    while (!_syncComplete && (static_cast<uint32_t>(micros() - start) < timeoutUs)) {
+        yield();
+    }
 
     if (!_syncComplete) {
         _syncStatus = -1;
@@ -700,10 +727,10 @@ void IS31FL3733::TriggerABM() {
 void IS31FL3733::_osbCallback(void *user, int status) {
     IS31FL3733 *self = (IS31FL3733 *)user;
 
-    // Update LED On/Off mask according to configured fault policy.
+    // Update LED On/Off mask from open faults only.  Short detection is not used for
+    // masking because this hardware reports spurious shorts on active LED rows.
     for (size_t i = 0; i < 24; i++) {
-        const uint8_t shortMask = self->_maskShortFaults ? self->_ledShort[i] : 0u;
-        self->_ledOn[i] = static_cast<uint8_t>(self->_ledOn[i] & ~(self->_ledOpen[i] | shortMask));
+        self->_ledOn[i] = static_cast<uint8_t>(self->_ledOn[i] & ~self->_ledOpen[i]);
     }
 
     // Write updated LED On/Off register

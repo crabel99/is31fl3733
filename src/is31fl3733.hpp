@@ -358,6 +358,11 @@ class IS31FL3733 {
     bool GetShortFaultMaskEnabled() const {
         return _maskShortFaults;
     }
+
+    /// @brief Returns true while PWM row writes are in flight or queued.
+    bool IsPwmUpdatePending() const {
+        return _pwmTxn.txPtr != nullptr || _pwmEnqueued != 0u || _pwmLocked || _pwmBatchActive;
+    }
     /** @} */
 
     // ---------------------------------------------------------------------------------------
@@ -719,6 +724,7 @@ inline void IS31FL3733::_sendRowPWM() {
 
     // Point transaction at prepared PWM row buffer
     _pwmTxn.txPtr = _pwmTxPtr;
+    _pwmTxn.chainNext = false;
 
     _ensurePage(1);
 
@@ -755,6 +761,7 @@ inline void IS31FL3733::_sendRowMode() {
 
     // Point transaction at prepared ABM row buffer
     _abmTxn.txPtr = _abmTxPtr;
+    _abmTxn.chainNext = false;
 
     _ensurePage(2);
 
@@ -786,6 +793,7 @@ inline void IS31FL3733::_asyncWrite(uint16_t pagereg, const uint8_t *data, uint8
     _cmdCtx[2].initialStatus = 0;
     _cmdTxn[2].onComplete = _cmdCallback;
     _cmdTxn[2].user = &_cmdCtx[2];
+    _cmdTxn[2].chainNext = false;
     _hw->enqueueWIRE(&_cmdTxn[2]);
 }
 
@@ -810,6 +818,7 @@ inline void IS31FL3733::_asyncRead(uint16_t pagereg, uint8_t *dest, uint8_t len,
     _cmdCtx[2].initialStatus = 0;
     _cmdTxn[2].onComplete = _cmdCallback;
     _cmdTxn[2].user = &_cmdCtx[2];
+    _cmdTxn[2].chainNext = false;
 
     // Configure read transaction - IS final (will invoke user callback)
     _cmdTxn[3].rxPtr = dest;
@@ -820,6 +829,7 @@ inline void IS31FL3733::_asyncRead(uint16_t pagereg, uint8_t *dest, uint8_t len,
     _cmdCtx[3].initialStatus = 0; // Can be populated by write phase if needed
     _cmdTxn[3].onComplete = _cmdCallback;
     _cmdTxn[3].user = &_cmdCtx[3];
+    _cmdTxn[3].chainNext = false;
 
     // Enqueue both transactions
     _hw->enqueueWIRE(&_cmdTxn[2]);
@@ -832,6 +842,7 @@ inline void IS31FL3733::_asyncRead(uint16_t pagereg, uint8_t *dest, uint8_t len,
 
 inline void IS31FL3733::_txnCallback(void *user, int status) {
     IS31FL3733 *self = (IS31FL3733 *)user;
+    (void)status;
 
     // Clear PWM transaction in-progress flag
     self->_pwmTxn.txPtr = nullptr;
@@ -842,6 +853,7 @@ inline void IS31FL3733::_txnCallback(void *user, int status) {
 
 inline void IS31FL3733::_txnModeCallback(void *user, int status) {
     IS31FL3733 *self = (IS31FL3733 *)user;
+    (void)status;
 
     // Clear ABM transaction in-progress flag
     self->_abmTxn.txPtr = nullptr;
@@ -861,6 +873,7 @@ inline void IS31FL3733::_irqCallback() {
 inline void IS31FL3733::_onServiceCallback(void *user, int status) {
     // Static callback after ISR read completes - dispatch to instance method
     IS31FL3733 *self = (IS31FL3733 *)user;
+    (void)status;
     // Process _lastISR value (already read by _irqCallback)
     // Lock PWM writes during fault handling
     self->_pwmLocked = true;
