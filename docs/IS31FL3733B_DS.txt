@@ -1,0 +1,5154 @@
+IS31FL3733B
+12×16 DOTS MATRIX LED DRIVER
+WITH INDIVIDUAL AUTO BREATH FUNCTION
+October 2024
+GENERAL DESCRIPTION
+
+FEATURES
+
+The IS31FL3733B is a general purpose 12×16 LEDs
+matrix driver with 1/12 cycle rate. The device can be
+programmed via an I2C compatible interface. Each
+LED can be dimmed individually with 8-bit PWM data
+which allowing 256 steps of linear dimming.
+
+
+
+
+
+
+
+IS31FL3733B features 3 Auto Breathing Modes which
+are noted as ABM-1, ABM-2 and ABM-3. For each
+Auto Breathing Mode, there are 4 timing characters
+which include current rising / holding / falling / off time
+and 3 loop characters which include Loop-Beginning /
+Loop-Ending / Loop-Times. Every LED can be
+configured to be any Auto Breathing Mode or NoBreathing Mode individually.
+Additionally each LED open and short state can be
+detected, IS31FL3733B store the open or short
+information in Open-Short Registers. The Open-Short
+Registers allowing MCU to read out via I2C
+compatible interface. Inform MCU whether there are
+LEDs open or short and the locations of open or short
+LEDs.
+The IS31FL3733B operates from 2.7V to 5.5V and
+features a very low shutdown and operational current.
+IS31FL3733B is available in QFN-48 (6mm×6mm) and
+eTQFP-48 packages. It operates from 2.7V to 5.5V
+over the temperature range of -40°C to +125°C.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+APPLICATIONS
+
+
+
+
+Lumissil Microsystems – www.lumissil.com
+Rev. E, 10/29/2024
+
+Supply voltage range: 2.7V to 5.5V
+16 current source outputs for row control
+12 switch current inputs for column scan control
+Up to 192 LEDs (12×16) in dot matrix
+Programmable 12×16 (64 RGBs) matrix size with
+de-ghost function
+1MHz I2C-compatible interface
+Selectable 3 Auto Breath Modes for each dot
+Auto Breath Loop Features interrupt pin inform
+MCU Auto Breath Loop completed
+Auto Breath offers 128 steps gamma current,
+interrupt and state look up registers
+1.05kHz/ 2.1kHz/ 4.2kHz/ 8.4kHz/ 26.7kHz PWM
+frequency options
+256 steps Global Current Setting
+Individual on/off control
+Individual 256 PWM control steps
+Individual Auto Breath Mode select
+Individual open and short error detect function
+Cascade for synchronization of chips
+QFN-48 (6mm×6mm) and eTQFP-48 packages
+RoHS & Halogen-Free Compliance
+TSCA Compliance
+Hand-held devices for LED display
+Gaming device (Keyboard, Mouse etc.)
+LED in white goods application
+
+1
+
+IS31FL3733B
+TYPICAL APPLICATION CIRCUIT
+*Not e 2
+
+VBattery
+
+22μF/10V
+
+20
+
+0.47μF 0.1μF
+
+0.47μF 0.1μF
+
+0.47μF 0.1μF
+
+29
+
+PVCC
+
+VIO
+
+VIO/MCU
+39
+0.47μF
+
+PVCC
+
+CS1 CS2 CS3 CS4 CS5 CS6 CS7 CS8 CS9 CS10 CS11 CS12 CS13 CS14 CS15 CS16
+
+37 AVCC
+
+CS16
+
+38 DVCC
+
+CS15
+
+33
+32
+
+L
+
+SW12
+
+K
+
+SW11
+VIO/MCU
+100kΩ
+
+2kΩ
+
+2kΩ
+
+CS2
+41
+42
+
+Micro
+Controller
+
+45
+46
+47
+100kΩ 100kΩ
+
+SDA
+SCL
+
+CS1
+
+16
+
+SDB
+IICRST
+
+I
+
+SW9
+
+IS31FL3733B
+
+INTB
+
+J
+
+SW10
+
+17
+
+H
+
+SW8
+
+SW12
+SW11
+
+15
+
+G
+
+SW7
+
+14
+
+F
+
+SW6
+
+E
+
+SW5
+40
+35
+43
+R ISE T
+20kΩ
+
+44
+48
+
+SW2
+
+SYNC
+
+SW1
+
+ISET
+ADDR1
+ADDR2
+
+PGND
+
+GND
+
+AGND
+
+3
+
+D
+
+SW4
+
+2
+
+C
+
+SW3
+
+B
+
+SW2
+
+5,12
+
+A
+
+SW1
+
+34
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+11
+
+12
+
+13
+
+14
+
+15
+
+16
+
+Figure 1 Typical Application Circuit (12×16)
+
+*Not e 2
+
+VBattery
+
+22μF/10V
+
+20
+
+0.47μF 0.1μF
+
+0.47μF 0.1μF
+
+0.47μF 0.1μF
+
+29
+
+VIO
+
+PVCC
+
+VIO/MCU
+39
+0.47μF
+
+PVCC
+
+CS1 CS2 CS3 CS4 CS5 CS6 CS7 CS8 CS9 CS10 CS11 CS12 CS13 CS14 CS15 CS16
+
+37 AVCC
+
+CS16
+
+38 DVCC
+
+CS15
+
+33
+32
+
+2kΩ
+
+K
+
+SW11
+
+VIO/MCU
+100kΩ
+
+L
+
+SW12
+
+2kΩ
+
+41
+42
+45
+
+Micro
+Controller
+
+46
+47
+100kΩ 100kΩ
+
+CS2
+SDA
+SCL
+
+CS1
+
+17
+16
+
+J
+
+SW10
+
+I
+
+SW9
+
+H
+
+SW8
+
+IS31FL3733B
+
+INTB
+SDB
+
+SW12
+
+IICRST
+
+SW11
+
+15
+14
+
+G
+
+SW7
+
+F
+
+SW6
+
+E
+
+SW5
+40
+35
+43
+R ISE T
+20kΩ
+
+44
+48
+
+SYNC
+ISET
+
+SW2
+SW1
+
+ADDR1
+ADDR2
+
+PGND
+
+GND
+
+AGND
+
+3
+2
+
+5,12
+34
+
+D
+
+SW4
+
+C
+
+SW3
+
+B
+
+SW2
+
+A
+
+SW1
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+11
+
+12
+
+13
+
+14
+
+15
+
+16
+
+Figure 2 Typical Application Circuit (RGB)
+
+Lumissil Microsystems – www.lumissil.com
+Rev. E, 10/29/2024
+
+2
+
+IS31FL3733B
+TYPICAL APPLICATION CIRCUIT (CONTINUED)
+
+Figure 3 Typical Application Circuit (Eight Parts Synchronization-Work)
+Note 1: IC should be placed far away from the antenna in order to prevent the EMI.
+Note 2: Electrolytic/Tantalum Capacitor maybe considered for high current application to avoid audible noise interference.
+Note 3: The VIO should be 1.8V≤ VIO ≤ VCC. And it is recommended to be equal to VOH of the micro controller. For example, if VOH=1.8V, set
+VIO=1.8V, if VOH=3.3V, set VIO=3.3V.
+Note 4: One system should contain only one master, all slave parts should be configured as slave mode before the master is configured as
+master mode. Work as master mode or slave mode specified by Configuration Register (Function register, address 00h). Master part output
+master clock, and all the other parts which work as slave input this master clock.
+
+Lumissil Microsystems – www.lumissil.com
+Rev. E, 10/29/2024
+
+3
+
+IS31FL3733B
+PIN CONFIGURATION
+Package
+
+Pin Configuration (Top View)
+
+QFN-48
+
+eTQFP-48
+
+Lumissil Microsystems – www.lumissil.com
+Rev. E, 10/29/2024
+
+4
+
+IS31FL3733B
+PIN DESCRIPTION
+No.
+
+Pin
+
+Description
+
+1,36
+
+NC
+
+Not connect.
+
+2~4,6~11, 13~15
+
+SW1~SW12
+
+Switch pin for LED matrix scanning.
+
+5,12
+
+PGND
+
+Power GND.
+
+16~19, 21~28,
+30~33
+
+CS1~CS16
+
+Current Source.
+
+20, 29
+
+PVCC
+
+Power for current source.
+
+34
+
+AGND
+
+Analog GND.
+
+35
+
+ISET
+
+Input terminal used to connect an external resistor. This regulates
+current source DC current value.
+
+37
+
+AVCC
+
+Power for analog circuits.
+
+38
+
+DVCC
+
+Power for digital circuits.
+
+39
+
+VIO
+
+Input logic reference voltage.
+
+40
+
+SYNC
+
+Synchronize pin. It is used for more than one part work synchronize.
+If it is not used please float this pin.
+
+41
+
+SDA
+
+I2C compatible serial data.
+
+42
+
+SCL
+
+I2C compatible serial clock.
+
+43
+
+ADDR1
+
+I2C address setting.
+
+44
+
+ADDR2
+
+I2C address setting.
+
+45
+
+INTB
+
+Open drain, interrupt output pin. Register F0h sets the function of the
+INTB pin and active low when the interrupt event happens. Can be
+NC (float) if interrupt function no used.
+
+46
+
+SDB
+
+Shutdown the chip when pull to low.
+
+47
+
+IICRST
+
+Reset I2C when pull high, need to pull down when normal operation.
+
+48
+
+GND
+
+Connect to GND.
+
+Thermal Pad
+
+Need to connect to GND pins.
+
+Lumissil Microsystems – www.lumissil.com
+Rev. E, 10/29/2024
+
+5
+
+IS31FL3733B
+ORDERING INFORMATION
+Industrial Range: -40°C to +125°C
+Order Part No.
+
+Package
+
+QTY/Reel
+
+IS31FL3733B-QFLS4-TR
+IS31FL3733B-TQLS4-TR
+
+QFN-48, Lead-free
+eTQFP-48, Lead-free
+
+2500
+
+Copyright © 2024 Lumissil Microsystems. All rights reserved. Lumissil Microsystems reserves the right to make changes to this specification and its
+products at any time without notice. Lumissil Microsystems assumes no liability arising out of the application or use of any information, products or
+services described herein. Customers are advised to obtain the latest version of this device specification before relying on any published information and
+before placing orders for products.
+Lumissil Microsystems does not recommend the use of any of its products in life support applications where the failure or malfunction of the product can
+reasonably be expected to cause failure of the life support system or to significantly affect its safety or effectiveness. Products are not authorized for use
+in such applications unless Lumissil Microsystems receives written assurance to its satisfaction, that:
+a.) the risk of injury or damage has been minimized;
+b.) the user assume all such risks; and
+c.) potential liability of Lumissil Microsystems is adequately protected under the circumstances
+
+Lumissil Microsystems – www.lumissil.com
+Rev. E, 10/29/2024
+
+6
+
+IS31FL3733B
+ABSOLUTE MAXIMUM RATINGS
+Supply voltage, VCC
+Voltage at any input pin
+Maximum junction temperature, TJMAX
+Storage temperature range, TSTG
+Operating temperature range, TA=TJ
+Package thermal resistance, junction to ambient (4-layer standard test PCB based
+on JESD 51-2A), θJA
+ESD (HBM)
+ESD (CDM)
+
+-0.3V ~ +6.0V
+-0.3V ~ VCC+0.3V
++150°C
+-65°C ~ +150°C
+-40°C ~ +125°C
+37.5°C/W (QFN)
+39°C/W (eTQFP)
+±8kV
+±750V
+
+Note 5: Stresses beyond those listed under “Absolute Maximum Ratings” may cause permanent damage to the device. These are stress
+ratings only and functional operation of the device at these or any other condition beyond those indicated in the operational sections of the
+specifications is not implied. Exposure to absolute maximum rating conditions for extended periods may affect device reliability.
+
+ELECTRICAL CHARACTERISTICS
+The following specifications apply for VCC= 3.6V, TA= 25°C, unless otherwise noted.
+Symbol
+
+Parameter
+
+VCC
+
+Supply voltage
+
+ICC
+
+Quiescent power supply current
+
+Conditions
+
+Min.
+
+Typ.
+
+2.7
+
+Max.
+
+Unit
+
+5.5
+
+V
+mA
+
+VSDB= VCC, all LEDs off
+
+2
+
+3
+
+VSDB= 0V
+
+2
+
+5
+
+VSDB= VCC, Configuration Register
+written “0000 0000
+
+2
+
+5
+
+ISD
+
+Shutdown current
+
+IOUT
+
+Maximum constant current of
+CS1~CS16
+
+RISET= 20kΩ
+
+38
+
+42
+
+46
+
+mA
+
+ILED
+
+Average current on each LED
+ILED = IOUT/12.75
+
+RISET = 20kΩ, GCC= 255,
+PWM= 255
+
+2.98
+
+3.29
+
+3.61
+
+mA
+
+Current sink headroom voltage
+SW1~SW12
+
+ISINK= 672mA (Note 6,7)
+
+300
+
+400
+
+Current source headroom voltage
+ISOURCE= 42mA (Note 6)
+CS1~CS16
+
+150
+
+200
+
+VHR
+
+tSCAN
+
+tNOL
+
+mV
+
+PFS= “000” (8.4kHz)
+
+90
+
+110
+
+130
+
+PFS= “010” (26.7kHz)
+
+30
+
+35
+
+40
+
+PFS= “011” (2.1kHz)
+
+360
+
+440
+
+520
+
+PFS= “000” (8.4kHz)
+Non-overlap blanking time during
+scan, the SWy and CSx are all off PFS= “010” (26.7kHz)
+during this time
+PFS= “011” (2.1kHz)
+
+6.14
+
+6.875
+
+8.87
+
+2.08
+
+2.43
+
+2.77
+
+24.5
+
+30
+
+35.5
+
+Period of scanning
+
+μA
+
+µs
+
+µs
+
+Logic Electrical Characteristics (SDA, SCL, ADDR1, ADDR2, SYNC, SDB)
+VIL
+
+Logic “0” input voltage
+
+VIO= 3.6V
+
+GND
+
+0.2VIO
+
+V
+
+VIH
+
+Logic “1” input voltage
+
+VIO= 3.6V
+
+0.75VIO
+
+VIO
+
+V
+
+VHYS
+
+Input Schmitt trigger hysteresis
+
+VIO= 3.6V
+
+VOL
+
+Logic “0” output voltage for SYNC IOL= 8mA
+
+VOH
+
+Logic “1” output voltage for SYNC IOH= 8mA
+
+IIL
+
+Logic “0” input current
+
+VINPUT= 0V (Note 8)
+
+5
+
+nA
+
+IIH
+
+Logic “1” input current
+
+VINPUT= VIO (Note 8)
+
+5
+
+nA
+
+Lumissil Microsystems – www.lumissil.com
+Rev. E, 10/29/2024
+
+0.2
+
+V
+0.4
+
+0.75VIO
+
+V
+V
+
+7
+
+IS31FL3733B
+DIGITAL INPUT SWITCHING CHARACTERISTICS (NOTE 8)
+Symbol
+
+Parameter
+
+Fast Mode
+Min.
+
+Typ.
+
+Fast Mode Plus
+Max. Min.
+
+Typ.
+
+Max.
+
+Units
+
+fSCL
+
+Serial-clock frequency
+
+-
+
+400
+
+-
+
+1000
+
+kHz
+
+tBUF
+
+Bus free time between a STOP and a START
+condition
+
+1.3
+
+-
+
+0.5
+
+-
+
+μs
+
+tHD, STA
+
+Hold time (repeated) START condition
+
+0.6
+
+-
+
+0.26
+
+-
+
+μs
+
+tSU, STA
+
+Repeated START condition setup time
+
+0.6
+
+-
+
+0.26
+
+-
+
+μs
+
+tSU, STO
+
+STOP condition setup time
+
+0.6
+
+-
+
+0.26
+
+-
+
+μs
+
+tHD, DAT
+
+Data hold time
+
+-
+
+-
+
+-
+
+-
+
+μs
+
+tSU, DAT
+
+Data setup time
+
+100
+
+-
+
+50
+
+-
+
+ns
+
+tLOW
+
+SCL clock low period
+
+1.3
+
+-
+
+0.5
+
+-
+
+μs
+
+tHIGH
+
+SCL clock high period
+
+0.7
+
+-
+
+0.26
+
+-
+
+μs
+
+tR
+
+Rise time of both SDA and SCL signals,
+receiving
+
+-
+
+300
+
+-
+
+120
+
+ns
+
+tF
+
+Fall time of both SDA and SCL signals,
+receiving
+
+-
+
+300
+
+-
+
+120
+
+ns
+
+Note 6: In case of RISET= 20kΩ, Global Current Control Register (PG3, 01h) written “1111 1111”, GCC = “1111 1111”.
+Note 7: All LEDs are on and PWM = “1111 1111”, GCC = “1111 1111”.
+Note 8: Guaranteed by design.
+
+Lumissil Microsystems – www.lumissil.com
+Rev. E, 10/29/2024
+
+8
+
+IS31FL3733B
+FUNCTIONAL BLOCK DIAGRAM
+
+Lumissil Microsystems – www.lumissil.com
+Rev. E, 10/29/2024
+
+9
+
+IS31FL3733B
+DETAILED DESCRIPTION
+
+I2C INTERFACE
+The IS31FL3733B uses a serial bus, which conforms
+to the I2C protocol, to control the chip’s functions with
+two wires: SCL and SDA. The IS31FL3733B has a 7bit slave address (A7:A1), followed by the R/W bit, A0.
+Set A0 to “0” for a write command and set A0 to “1” for
+a read command. The value of bits A1 and A2 are
+decided by the connection of the ADDR1 pin. The
+value of bits A3 and A4 are decided by the connection
+of the ADDR2 pin.
+The complete slave address is:
+Table 1 Slave Address:
+ADDR2 ADDR1
+GND
+GND
+GND
+GND
+SCL
+SCL
+SCL
+SCL
+SDA
+SDA
+SDA
+SDA
+VCC
+VCC
+VCC
+VCC
+
+GND
+SCL
+SDA
+VCC
+GND
+SCL
+SDA
+VCC
+GND
+SCL
+SDA
+VCC
+GND
+SCL
+SDA
+VCC
+
+A7:A5
+
+A4:A3
+
+A2:A1
+
+101
+
+00
+00
+00
+00
+01
+01
+01
+01
+10
+10
+10
+10
+11
+11
+11
+11
+
+00
+01
+10
+11
+00
+01
+10
+11
+00
+01
+10
+11
+00
+01
+10
+11
+
+A0
+
+After the last bit of the chip address is sent, the
+master checks for the IS31FL3733B’s acknowledge.
+The master releases the SDA line high (through a
+pull-up resistor). Then the master sends an SCL pulse.
+If the IS31FL3733B has received the address
+correctly, then it holds the SDA line low during the
+SCL pulse. If the SDA line is not low, then the master
+should send a “STOP” signal (discussed later) and
+abort the transfer.
+Following acknowledge of IS31FL3733B, the register
+address byte is sent, most significant bit first.
+IS31FL3733B must generate another acknowledge
+indicating that the register address has been received.
+Then 8-bit of data byte are sent next, most significant
+bit first. Each data bit should be valid while the SCL
+level is stable high. After the data byte is sent, the
+IS31FL3733B must generate another acknowledge to
+indicate that the data was received.
+
+0/1
+
+ADDR1/2 connected to GND, (A2:A1)/(A4:A3)=00;
+ADDR1/2 connected to VCC, (A2:A1)/(A4:A3)=11;
+ADDR1/2 connected to SCL, (A2:A1)/(A4:A3)=01;
+ADDR1/2 connected to SDA, (A2:A1)/(A4:A3)=10;
+The SCL line is uni-directional. The SDA line is bidirectional (open-collector) with a pull-up resistor
+(typically 1kΩ). The maximum clock frequency
+specified by the I2C standard is 1MHz. In this
+discussion, the master is the microcontroller and the
+slave is the IS31FL3733B.
+The timing diagram for the I2C is shown in Figure 4.
+The SDA is latched in on the stable high level of the
+SCL. When there is no interface activity, the SDA line
+should be held high.
+The “START” signal is generated by lowering the SDA
+signal while the SCL signal is high. The start signal will
+alert all devices attached to the I2C bus to check the
+incoming address against their own chip address.
+
+Lumissil Microsystems – www.lumissil.com
+Rev. E, 10/29/2024
+
+The 8-bit chip address is sent next, most significant bit
+first. Each address bit must be stable while the SCL
+level is high.
+
+The “STOP” signal ends the transfer. To signal
+“STOP”, the SDA signal goes high while the SCL
+signal is high.
+ADDRESS AUTO INCREMENT
+To write multiple bytes of data into IS31FL3733B, load
+the address of the data register that the first data byte
+is intended for. During the IS31FL3733B acknowledge
+of receiving the data byte, the internal address pointer
+will increment by one. The next data byte sent to
+IS31FL3733B will be placed in the new address, and
+so on. The auto increment of the address will continue
+as long as data continues to be written to
+IS31FL3733B (Figure 7).
+READING OPERATION
+Register FEh, F1h, 18h~45h of Page 0 and 11h of
+Page 3 can be read.
+To read the FEh and F1h, after I2C start condition, the
+bus master must send the IS31FL3733B device
+____
+
+address with the R/W bit set to “0”, followed by the
+register address (FEh or F1h) which determines which
+register is accessed. Then restart I2C, the bus master
+should send the IS31FL3733B device address with
+____
+
+the R/W bit set to “1”. Data from the register defined
+by the command byte is then sent from the
+IS31FL3733B to the master (Figure 8).
+To read the 18h~45h of Page 0 and 11h of Page 3,
+the FDh should write with 00h before follow the Figure
+8 sequence to read the data, that means, when you
+want to read 18h~45h of Page 0 and 11h of Page 3
+the FDh should point to Page 0 first and you can read
+the Page 0 data.
+10
+
+IS31FL3733B
+
+Figure 4 Interface Timing
+
+Figure 5 Bit Transfer
+
+Figure 6 Writing to IS31FL3733B (Typical)
+
+Figure 7 Writing to IS31FL3733B (Automatic Address Increment)
+
+Figure 8 Reading from IS31FL3733B
+
+Lumissil Microsystems – www.lumissil.com
+Rev. E, 10/29/2024
+
+11
+
+IS31FL3733B
+REGISTER DEFINITION-1
+Address
+
+Name
+
+Function
+
+Table
+
+R/W
+
+Default
+
+Available Page 0 to Page 3 Registers
+
+2
+
+W
+
+xxxx xxxx
+
+FDh
+
+Command Register
+
+FEh
+
+Command Register Write lock To lock/unlock Command Register
+
+3
+
+R/W
+
+F0h
+
+Interrupt Mask Register
+
+Configure the interrupt function
+
+4
+
+W
+
+F1h
+
+Interrupt Status Register
+
+Show the interrupt status
+
+5
+
+R
+
+0000 0000
+
+REGISTER CONTROL
+
+Table 2 FDh Command Register (Write Only)
+Data
+
+Function
+
+0000 0000
+
+Point to Page 0 (PG0, LED Control Register is available)
+
+0000 0001
+
+Point to Page 1 (PG1, PWM Register is available)
+
+0000 0010
+
+Point to Page 2 (PG2, Auto Breath Mode Register is available)
+
+0000 0011
+
+Point to Page 3 (PG3, Function Register is available)
+
+Others
+
+Reserved
+
+Note: FDh is locked when power up, need to unlock this register before write command to it. See Table 3 for detail.
+The Command Register should be configured first after writing in the slave address to choose the available register. Then write data in the
+choosing register. Power up default state is “0000 0000”.
+For example, when write “0000 0001” in the Command Register (FDh), the data which writing after will be stored in PWM Register (Page1).
+
+Lumissil Microsystems – www.lumissil.com
+Rev. E, 10/29/2024
+
+12
+
+IS31FL3733B
+Table 3 FEh Command Register Write Lock
+(Read/Write)
+
+Table 5 F1h Interrupt Status Register
+(Read Only)
+
+Bit
+
+D7:D0
+
+Bit
+
+D7:D5
+
+Name
+
+CRWL
+
+Name
+
+-
+
+Default
+
+0000 0000 (FDh write disable)
+
+Default
+
+000
+
+D4
+
+D2
+
+D1
+
+D0
+
+ABM3 ABM2 ABM1
+
+SB
+
+OB
+
+0
+
+0
+
+0
+
+D3
+
+0
+
+0
+
+To select the PG0~PG3, need to unlock this register
+first, with the purpose to avoid misoperation of this
+register. When FEh is written with 0xC5, FDh is
+allowed to modify once, after the FDh is modified the
+FEh will reset to be 0x00 at once.
+
+Show the interrupt status for IC.
+
+CRWL Command Register Write Lock
+0x00 FDh write disable
+0xC5 FDh write enable once
+
+ABM2 Auto Breath Mode 2 Finish Bit
+0
+ABM2 not finish
+1
+ABM2 finish
+
+Table 4 F0h Interrupt Mask Register (Write Only)
+Bit
+
+D7:D4
+
+D3
+
+D2
+
+D1
+
+D0
+
+Name
+
+-
+
+IAC
+
+IAB
+
+IS
+
+IO
+
+Default
+
+0000
+
+0
+
+0
+
+0
+
+0
+
+ABM3 Auto Breath Mode 3 Finish Bit
+0
+ABM3 not finish
+1
+ABM3 finish
+
+ABM1 Auto Breath Mode 1 Finish Bit
+0
+ABM1 not finish
+1
+ABM1 finish
+
+Configure the interrupt function for IC.
+
+SB
+0
+1
+
+Short Bit
+No short
+Short happens
+
+IAC
+Auto Clear Interrupt Bit
+0
+Interrupt could not auto clear
+1
+Interrupt auto clear when INTB stay low
+exceeds 8ms
+
+OB
+0
+1
+
+Open Bit
+No open
+Open happens
+
+IAB
+0
+1
+
+Auto Breath Interrupt Bit
+Disable auto breath loop finish interrupt
+Enable auto breath loop finish interrupt
+
+IS
+0
+1
+
+Dot Short Interrupt Bit
+Disable dot short interrupt
+Enable dot short interrupt
+
+IO
+0
+1
+
+Dot Open Interrupt Bit
+Disable dot open interrupt
+Enable dot open interrupt
+
+Lumissil Microsystems – www.lumissil.com
+Rev. E, 10/29/2024
+
+13
+
+IS31FL3733B
+REGISTER DEFINITION-2
+Address
+
+Name
+
+Function
+
+Table
+
+R/W
+
+Default
+
+PG0 (0x00): LED Control Register
+00h ~ 17h LED On/Off Register
+
+Set on or off state for each LED
+
+7
+
+W
+
+18h ~ 2Fh LED Open Register
+
+Store open state for each LED
+
+8
+
+R
+
+30h ~ 47h LED Short Register
+
+Store short state for each LED
+
+9
+
+R
+
+Set PWM duty for LED
+
+10
+
+W
+
+0000 0000
+
+11
+
+W
+
+0000 0000
+
+0000 0000
+
+PG1 (0x01): PWM Register
+00h~BFh
+
+PWM Register
+
+PG2 (0x02): Auto Breath Mode Register
+00h~BFh
+
+Auto Breath Mode Register Set operating mode of each dot
+
+PG3 (0x03): Function Register
+00h
+
+Configuration Register
+
+Configure the operation mode
+
+13
+
+W
+
+01h
+
+Global Current Control
+Register
+
+Set the global current
+
+14
+
+W
+
+02h
+
+Auto Breath Control
+Register 1 of ABM-1
+
+Set fade in and hold time for breath
+function of ABM-1
+
+15
+
+W
+
+03h
+
+Auto Breath Control
+Register 2 of ABM-1
+
+Set the fade out and off time for breath
+function of ABM-1
+
+16
+
+W
+
+04h
+
+Auto Breath Control
+Register 3 of ABM-1
+
+Set loop characters of ABM-1
+
+17
+
+W
+
+05h
+
+Auto Breath Control
+Register 4 of ABM-1
+
+Set loop characters of ABM-1
+
+18
+
+W
+
+06h
+
+Auto Breath Control
+Register 1 of ABM-2
+
+Set fade in and hold time for breath
+function of ABM-2
+
+15
+
+W
+
+07h
+
+Auto Breath Control
+Register 2 of ABM-2
+
+Set the fade out and off time for breath
+function of ABM-2
+
+16
+
+W
+
+08h
+
+Auto Breath Control
+Register 3 of ABM-2
+
+Set loop characters of ABM-2
+
+17
+
+W
+
+09h
+
+Auto Breath Control
+Register 4 of ABM-2
+
+Set loop characters of ABM-2
+
+18
+
+W
+
+0Ah
+
+Auto Breath Control
+Register 1 of ABM-3
+
+Set fade in and hold time for breath
+function of ABM-3
+
+15
+
+W
+
+0Bh
+
+Auto Breath Control
+Register 2 of ABM-3
+
+Set the fade out and off time for breath
+function of ABM-3
+
+16
+
+W
+
+0Ch
+
+Auto Breath Control
+Register 3 of ABM-3
+
+Set loop characters of ABM-3
+
+17
+
+W
+
+0Dh
+
+Auto Breath Control
+Register 4 of ABM-3
+
+Set loop characters of ABM-3
+
+18
+
+W
+
+0Eh
+
+Time Update Register
+
+Update the setting of 02h ~ 0Dh registers
+
+-
+
+W
+
+0Fh
+
+SWy Pull-Up Resistor
+Selection Register
+
+Set the pull-up resistor for SWy
+
+19
+
+W
+
+10h
+
+CSx Pull-Down Resistor
+Selection Register
+
+Set the pull-down resistor for CSx
+
+20
+
+W
+
+11h
+
+Reset Register
+
+Reset all register to POR state
+
+-
+
+R
+
+Lumissil Microsystems – www.lumissil.com
+Rev. E, 10/29/2024
+
+0000 0000
+
+14
+
+IS31FL3733B
+Table 6 Page 0 (PG0, 0x00): LED Control Register
+LED Location
+
+LED On/Off Register
+
+LED Open Register LED Short Register
+
+SW1(CS1~ CS8)
+
+SW1(CS9~ CS16)
+
+00h
+
+01h
+
+18h
+
+19h
+
+30h
+
+31h
+
+SW2(CS1~ CS8)
+
+SW2(CS9~ CS16)
+
+02h
+
+03h
+
+1Ah
+
+1Bh
+
+32h
+
+33h
+
+SW3(CS1~ CS8)
+
+SW3(CS9~ CS16)
+
+04h
+
+05h
+
+1Ch
+
+1Dh
+
+34h
+
+35h
+
+SW4(CS1~ CS8)
+
+SW4(CS9~ CS16)
+
+06h
+
+07h
+
+1Eh
+
+1Fh
+
+36h
+
+37h
+
+SW5(CS1~ CS8)
+
+SW5(CS9~ CS16)
+
+08h
+
+09h
+
+20h
+
+21h
+
+38h
+
+39h
+
+SW6(CS1~ CS8)
+
+SW6(CS9~ CS16)
+
+0Ah
+
+0Bh
+
+22h
+
+23h
+
+3Ah
+
+3Bh
+
+SW7(CS1~ CS8)
+
+SW7(CS9~ CS16)
+
+0Ch
+
+0Dh
+
+24h
+
+25h
+
+3Ch
+
+3Dh
+
+SW8(CS1~ CS8)
+
+SW8(CS9~ CS16
+
+0Eh
+
+0Fh
+
+26h
+
+27h
+
+3Eh
+
+3Fh
+
+SW9(CS1~ CS8)
+
+SW9(CS9~ CS16)
+
+10h
+
+11h
+
+28h
+
+29h
+
+40h
+
+41h
+
+SW10(CS1~ CS8)
+
+SW10(CS9~ CS16)
+
+12h
+
+13h
+
+2Ah
+
+2Bh
+
+42h
+
+43h
+
+SW11(CS1~ CS8)
+
+SW11(CS9~ CS16)
+
+14h
+
+15h
+
+2Ch
+
+2Dh
+
+44h
+
+45h
+
+SW12(CS1~ CS8)
+
+SW12(CS9~ CS16)
+
+16h
+
+17h
+
+2Eh
+
+2Fh
+
+46h
+
+47h
+
+Table 7 00h ~ 17h LED On/Off Register
+
+Table 9 30h ~ 47h LED Short Register
+
+Bit
+
+D7:D0
+
+Bit
+
+D7:D0
+
+Name
+
+CCS8 : CCS1 or CCS16 : CCS9
+
+Name
+
+ST8 : ST1 or ST16 : ST9
+
+Default
+
+0000 0000
+
+Default
+
+0000 0000
+
+The LED On/Off Registers store the on or off state of
+each LED in the Matrix.
+
+The LED Short Registers store the short or normal
+state of each LED in the Matrix.
+
+CX-Y
+0
+1
+
+STx
+0
+1
+
+LED State Bit
+LED off
+LED on
+
+LED Short Bit
+LED normal
+LED short
+
+Table 8 18h ~ 2Fh LED Open Register
+Bit
+
+D7:D0
+
+Name
+
+OP8 : OP1 or OP16 : OP9
+
+Default
+
+0000 0000
+
+The LED Open Registers store the open or normal
+state of each LED in the Matrix.
+OPx
+0
+1
+
+LED Open Bit
+LED normal
+LED open
+
+Lumissil Microsystems – www.lumissil.com
+Rev. E, 10/29/2024
+
+15
+
+IS31FL3733B
+Page 1 (PG1, 0x01): PWM Register
+PVCC
+
+PWM PWM PWM PWM PWM PWM PWM PWM PWM PWM PWM PWM PWM PWM PWM PWM
+CS1 CS2 CS3 CS4 CS5 CS6 CS7 CS8 CS9
+CS10 CS11 CS12 CS13 CS14 CS15 CS16
+
+L
+
+B0
+
+B3 B4 B5 B6 B7 B8 B9 BA BB BC BD BE BF
+
+SW12
+
+K
+
+A0 A1 A2 A3 A4 A5 A6 A7 A8 A9 AA AB AC AD AE AF
+
+SW11
+
+J
+
+90
+
+91
+
+92
+
+93
+
+94
+
+95
+
+96
+
+97
+
+98
+
+99
+
+9A 9B 9C 9D 9E
+
+9F
+
+SW10
+
+I
+
+80
+
+81
+
+82
+
+83
+
+84
+
+85
+
+86
+
+87
+
+88
+
+89
+
+8A 8B 8C 8D 8E
+
+8F
+
+SW9
+
+B1
+
+B2
+
+H
+
+70
+
+71
+
+72
+
+73
+
+74
+
+75
+
+76
+
+77
+
+78
+
+79
+
+7A 7B 7C 7D 7E
+
+7F
+
+SW8
+
+G
+
+60
+
+61
+
+62
+
+63
+
+64
+
+65
+
+66
+
+67
+
+68
+
+69
+
+6A 6B 6C 6D 6E
+
+6F
+
+SW7
+
+F
+
+50
+
+51
+
+52
+
+53
+
+54
+
+55
+
+56
+
+57
+
+58
+
+59
+
+5A 5B 5C 5D 5E
+
+5F
+
+SW6
+
+E
+
+40
+
+41
+
+42
+
+43
+
+44
+
+45
+
+46
+
+47
+
+48
+
+49
+
+4A 4B 4C 4D 4E
+
+4F
+
+SW5
+
+3F
+
+SW4
+
+D
+
+30
+
+31
+
+32
+
+33
+
+34
+
+35
+
+36
+
+37
+
+38
+
+39
+
+3A 3B 3C 3D 3E
+
+C
+
+20
+
+21
+
+22
+
+23
+
+24
+
+25
+
+26
+
+27
+
+28
+
+29
+
+2A 2B 2C 2D 2E
+
+2F
+
+SW3
+
+B
+
+10
+
+11
+
+12
+
+13
+
+14
+
+15
+
+16
+
+17
+
+18
+
+19
+
+1A 1B 1C 1D 1E
+
+1F
+
+SW2
+
+A
+
+00
+
+01
+
+02
+
+03
+
+04
+
+05
+
+06
+
+07
+
+08
+
+09
+
+0A 0B 0C 0D 0E
+
+0F
+
+SW1
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+11
+
+16
+
+12
+
+13
+
+14
+
+15
+
+T12
+T11
+T10
+T09
+T08
+T07
+T06
+T05
+T04
+T03
+T02
+T01
+
+Figure 9 PWM Register
+
+Where Duty is the duty cycle of SWy (PFS= “000”),
+
+Table 10 00h ~ BFh PWM Register
+Bit
+
+D7:D0
+
+Name
+
+PWM
+
+Default
+
+0000 0000
+
+Duty 
+
+PWM
+ I OUT  Duty
+256
+
+(1)
+
+IOUT 
+
+n 0
+
+Lumissil Microsystems – www.lumissil.com
+Rev. E, 10/29/2024
+
+840 GCC
+
+RISET 256
+
+(3)
+
+GCC is the Global Current Control register (PG3,
+01h) value and RISET is the external resistor of ISET
+pin. D[n] stands for the individual bit value, 1 or 0, in
+location n.
+For example: if D7:D0= 10110101 (0xB5, 181),
+GCC=255, RISET=20kΩ (IOUT=42mA),
+
+7
+
+PWM   D [ n ]  2 n
+
+(2)
+
+IOUT is the output current of CSx (x=1~16),
+
+Each dot has a byte to modulate the PWM duty in
+256 steps.
+The value of the PWM Registers decides the
+average current of each LED noted ILED.
+ILED computed by Formula (1):
+
+I LED 
+
+110s
+1
+1
+ 
+110s  6.875s 12 12.75
+
+I LED 
+
+20  22  24  25  27
+1
+ I OUT 
+ 2 .34 mA
+256
+12 .75
+
+16
+
+IS31FL3733B
+Page 2 (PG2, 0x02): Auto Breath Mode Register
+PVCC
+
+PWM PWM PWM PWM PWM PWM PWM PWM PWM PWM PWM PWM PWM PWM PWM PWM
+CS1 CS2 CS3 CS4 CS5 CS6 CS7 CS8 CS9
+CS10 CS11 CS12 CS13 CS14 CS15 CS16
+
+B3 B4 B5 B6 B7 B8 B9 BA BB BC BD BE BF
+
+SW12
+
+A0 A1 A2 A3 A4 A5 A6 A7 A8 A9 AA AB AC AD AE AF
+
+SW11
+
+J
+
+90
+
+91
+
+92
+
+93
+
+94
+
+95
+
+96
+
+97
+
+98
+
+99
+
+9A 9B 9C 9D 9E
+
+9F
+
+SW10
+
+I
+
+80
+
+81
+
+82
+
+83
+
+84
+
+85
+
+86
+
+87
+
+88
+
+89
+
+8A 8B 8C 8D 8E
+
+8F
+
+SW9
+
+H
+
+70
+
+71
+
+72
+
+73
+
+74
+
+75
+
+76
+
+77
+
+78
+
+79
+
+7A 7B 7C 7D 7E
+
+7F
+
+SW8
+
+6F
+
+SW7
+
+L
+K
+
+G
+
+B0
+
+B1
+
+60
+
+61
+
+B2
+
+62
+
+63
+
+64
+
+65
+
+66
+
+67
+
+68
+
+69
+
+6A 6B 6C 6D 6E
+
+F
+
+50
+
+51
+
+52
+
+53
+
+54
+
+55
+
+56
+
+57
+
+58
+
+59
+
+5A 5B 5C 5D 5E
+
+5F
+
+SW6
+
+E
+
+40
+
+41
+
+42
+
+43
+
+44
+
+45
+
+46
+
+47
+
+48
+
+49
+
+4A 4B 4C 4D 4E
+
+4F
+
+SW5
+
+D
+
+30
+
+31
+
+32
+
+33
+
+34
+
+35
+
+36
+
+37
+
+38
+
+39
+
+3A 3B 3C 3D 3E
+
+3F
+
+SW4
+
+2F
+
+SW3
+
+1F
+
+SW2
+SW1
+
+C
+B
+A
+
+20
+10
+
+21
+11
+
+22
+12
+
+23
+
+24
+
+13
+
+14
+
+25
+15
+
+26
+
+27
+
+16
+
+17
+
+28
+18
+
+29
+19
+
+2A 2B 2C 2D 2E
+1A 1B 1C 1D 1E
+
+00
+
+01
+
+02
+
+03
+
+04
+
+05
+
+06
+
+07
+
+08
+
+09
+
+0A 0B 0C 0D 0E
+
+0F
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+11
+
+16
+
+12
+
+13
+
+14
+
+15
+
+T12
+T11
+T10
+T09
+T08
+T07
+T06
+T05
+T04
+T03
+T02
+T01
+
+Figure 10 Auto Breath Mode Selection Register
+
+Table 11 00h ~ BFh Auto Breath Mode Register
+Bit
+
+D7:D2
+
+D1:D0
+
+Name
+
+-
+
+ABMS
+
+Default
+
+-
+
+00
+
+The Auto Breath Mode Register sets operating mode
+of each dot.
+ABMS Auto Breath Mode Selection Bit
+00
+PWM control mode
+01
+Select Auto Breath Mode 1 (ABM-1)
+10
+Select Auto Breath Mode 2 (ABM-2)
+11
+Select Auto Breath Mode 3 (ABM-3)
+
+Lumissil Microsystems – www.lumissil.com
+Rev. E, 10/29/2024
+
+17
+
+IS31FL3733B
+Table 12 Page 3 (PG3, 0x03): Function Register
+Register
+
+Name
+
+Function
+
+R/W
+
+00h
+
+Configuration Register
+
+Configure the operation mode
+
+W
+
+01h
+
+Global Current Control
+Register
+
+Set the global current
+
+W
+
+02h
+
+Auto Breath Control
+Register 1 of ABM-1
+
+Set fade in and hold time for breath function of
+ABM-1
+
+W
+
+03h
+
+Auto Breath Control
+Register 2 of ABM-1
+
+Set the fade out and off time for breath function
+of ABM-1
+
+W
+
+04h
+
+Auto Breath Control
+Register 3 of ABM-1
+
+Set loop characters of ABM-1
+
+W
+
+05h
+
+Auto Breath Control
+Register 4 of ABM-1
+
+Set loop characters of ABM-1
+
+W
+
+06h
+
+Auto Breath Control
+Register 1 of ABM-2
+
+Set fade in and hold time for breath function of
+ABM-2
+
+W
+
+07h
+
+Auto Breath Control
+Register 2 of ABM-2
+
+Set the fade out and off time for breath function
+of ABM-2
+
+W
+
+08h
+
+Auto Breath Control
+Register 3 of ABM-2
+
+Set loop characters of ABM-2
+
+W
+
+09h
+
+Auto Breath Control
+Register 4 of ABM-2
+
+Set loop characters of ABM-2
+
+W
+
+0Ah
+
+Auto Breath Control
+Register 1 of ABM-3
+
+Set fade in and hold time for breath function of
+ABM-3
+
+W
+
+0Bh
+
+Auto Breath Control
+Register 2 of ABM-3
+
+Set the fade out and off time for breath function
+of ABM-3
+
+W
+
+0Ch
+
+Auto Breath Control
+Register 3 of ABM-3
+
+Set loop characters of ABM-3
+
+W
+
+0Dh
+
+Auto Breath Control
+Register 4 of ABM-3
+
+Set loop characters of ABM-3
+
+W
+
+0Eh
+
+Time Update Register
+
+Update the setting of 02h ~ 0Dh registers
+
+W
+
+0Fh
+
+SWy Pull-Up Resistor
+Selection Register
+
+Set the pull-up resistor for Swy
+
+W
+
+10h
+
+CSx Pull-Down Resistor
+Selection Register
+
+Set the pull-down resistor for CSx
+
+W
+
+11h
+
+Reset Register
+
+Reset all register to POR state
+
+R
+
+Table 13 00h Configuration Register
+Bit
+
+D7:D6
+
+D5:D3
+
+D2
+
+D1
+
+D0
+
+Name
+
+SYNC
+
+PFS
+
+OSD B_EN
+
+SSD
+
+Default
+
+00
+
+000
+
+0
+
+0
+
+0
+
+The Configuration Register sets operating mode of
+IS31FL3733B.
+When SYNC bits are set to “01”, the IS31FL3733B is
+configured as the master clock source and the
+SYNC pin will generate a clock signal distributed to
+the clock slave devices. To be configured as a clock
+slave device and accept an external clock input the
+slave device’s SYNC bits must be set to “10”.
+Lumissil Microsystems – www.lumissil.com
+Rev. E, 10/29/2024
+
+Default
+
+0000
+0000
+
+The PFS bits selects a fixed PWM operating
+frequency for all CSx, when PFS set “000”, the PWM
+frequency is 8.4kHz, when PFS set to “010”, the
+PWM frequency is 26.7kHz.
+When OSD set high, open/short detection will be
+trigger once, the user could trigger OS detection
+again by set OSD from “0” to “1”.
+When B_EN enable, those dots select working in
+ABM-x mode will start to run the pre-established
+timing. If it is disabled, all dots work in PWM mode.
+Following Figure 16 to enable the Auto Breath mode
+When SSD is “0”, IS31FL3733B works in software
+shutdown mode and to normal operate the SSD bit
+should set to “1”.
+18
+
+IS31FL3733B
+SYNC
+00/11
+01
+10
+
+Synchronize Configuration
+High Impedance
+Master
+Slave
+
+Table 15 02h, 06h, 0Ah Auto Breath Control
+Register 1 of ABM-x
+
+PFS
+000
+010
+001
+011
+100
+
+PWM Frequency Setting
+8.4kHz(default)
+26.7kHz
+4.2kHz
+2.1kHz
+1.05kHz
+
+OSD
+0
+1
+
+Open/Short Detection Enable Bit
+Disable open/short detection
+Enable open/short detection
+
+Bit
+
+D7:D5
+
+D4:D1
+
+D0
+
+Name
+
+T1
+
+T2
+
+-
+
+Default
+
+000
+
+0000
+
+0
+
+Auto Breath Control Register 1 set the T1&T2 time in
+Auto Breath Mode.
+T1
+
+T1 Setting
+PFS
+
+000(s)
+
+010(s)
+
+001(s)
+
+011(s)
+
+100(s)
+
+000
+
+0.21
+
+0.07
+
+0.42
+
+0.84
+
+1.68
+
+001
+
+0.42
+
+0.14
+
+0.84
+
+1.68
+
+3.36
+
+B_EN Auto Breath Enable
+0
+PWM Mode Enable
+1
+Auto Breath Mode Enable
+
+010
+
+0.84
+
+0.28
+
+1.68
+
+3.36
+
+6.72
+
+011
+
+1.68
+
+0.56
+
+3.36
+
+6.72
+
+13.44
+
+100
+
+3.36
+
+1.12
+
+6.72
+
+13.44
+
+26.88
+
+SSD
+0
+1
+
+101
+
+6.72
+
+2.24
+
+13.44
+
+26.88
+
+53.76
+
+110
+
+13.44
+
+4.48
+
+26.88
+
+53.76
+
+107.52
+
+111
+
+26.88
+
+8.96
+
+53.76
+
+107.52 215.04
+
+T2 Setting
+PFS
+000(s) 010(s)
+
+001(s)
+
+011(s)
+
+100(s)
+
+T1
+
+Software Shutdown Control
+Software shutdown
+Normal operation
+
+Table 14 01h Global Current Control Register
+Bit
+
+D7:D0
+
+Name
+
+GCCx
+
+Default
+
+0000 0000
+
+T2
+
+The Global Current Control Register modulates all
+CSx (x=1~16) DC current which is noted as IOUT in
+256 steps.
+IOUT is computed by the Formula (3):
+
+IOUT 
+
+840 GCC
+
+RISET 256
+
+T2
+
+(3)
+
+7
+
+GCC   D[ n ]  2 n
+n0
+
+Where D[n] stands for the individual bit value, 1 or 0,
+in location n, RISET is the external resistor of ISET pin.
+For example: if D7:D0 = 1011 0101,
+
+000
+
+0
+
+0
+
+0
+
+0
+
+0
+
+001
+
+0.21
+
+0.07
+
+0.42
+
+0.84
+
+1.68
+
+010
+
+0.42
+
+0.14
+
+0.84
+
+1.68
+
+3.36
+
+011
+
+0.84
+
+0.28
+
+1.68
+
+3.36
+
+6.72
+
+100
+
+1.68
+
+0.56
+
+3.36
+
+6.72
+
+13.44
+
+101
+
+3.36
+
+1.12
+
+6.72
+
+13.44
+
+26.88
+
+110
+
+6.72
+
+2.24
+
+13.44
+
+26.88
+
+53.76
+
+111
+
+13.44
+
+4.48
+
+26.88
+
+53.76
+
+107.52
+
+1000
+
+26.88
+
+8.96
+
+53.76
+
+107.52 215.04
+
+Others
+
+Unavailable
+
+20  22  24  25  27 840
+IOUT 
+
+256
+RISET
+
+Lumissil Microsystems – www.lumissil.com
+Rev. E, 10/29/2024
+
+19
+
+IS31FL3733B
+Table 16 03h, 07h, 0Bh Auto Breath Control
+Register 2 of ABM-x
+Bit
+
+D7:D5
+
+D4:D1
+
+D0
+
+Name
+
+T3
+
+T4
+
+-
+
+Default
+
+000
+
+0000
+
+0
+
+Auto Breath Control Register 2 set the T3&T4 time in
+Auto Breath Mode.
+T3
+
+T3 Setting
+PFS
+
+000(s)
+
+010(s)
+
+001(s)
+
+011(s)
+
+100(s)
+
+000
+
+0.21
+
+0.07
+
+0.42
+
+0.84
+
+1.68
+
+001
+
+0.42
+
+0.14
+
+0.84
+
+1.68
+
+3.36
+
+010
+
+0.84
+
+0.28
+
+1.68
+
+3.36
+
+6.72
+
+011
+
+1.68
+
+0.56
+
+3.36
+
+6.72
+
+13.44
+
+100
+
+3.36
+
+1.12
+
+6.72
+
+13.44
+
+26.88
+
+101
+
+6.72
+
+2.24
+
+13.44
+
+26.88
+
+53.76
+
+110
+
+13.44
+
+4.48
+
+26.88
+
+53.76
+
+107.52
+
+111
+
+26.88
+
+8.96
+
+53.76
+
+107.52 215.04
+
+T3
+
+T4
+
+T4 Setting
+
+PFS
+000(s)
+T4
+0000
+0
+
+010(s)
+
+001(s)
+
+011(s)
+
+100(s)
+
+0
+
+0
+
+0
+
+0
+
+0001
+
+0.21
+
+0.07
+
+0.42
+
+0.84
+
+1.68
+
+0010
+
+0.42
+
+0.14
+
+0.84
+
+1.68
+
+3.36
+
+0011
+
+0.84
+
+0.28
+
+1.68
+
+3.36
+
+6.72
+
+0100
+
+1.68
+
+0.56
+
+3.36
+
+6.72
+
+13.44
+
+0101
+
+3.36
+
+1.12
+
+6.72
+
+13.44
+
+26.88
+
+0110
+
+6.72
+
+2.24
+
+13.44
+
+26.88
+
+53.76
+
+0111
+
+13.44
+
+4.48
+
+26.88
+
+53.76
+
+107.52
+
+1000
+
+26.88
+
+8.96
+
+53.76
+
+107.52 215.04
+
+1001
+
+53.76
+
+17.92
+
+107.52 215.04 430.08
+
+1010
+
+107.52
+
+35.84
+
+215.04 430.08 860.16
+
+Others
+
+Unavailable
+
+Note: Do not set T4= “0000” in Auto Breath Mode when the PWM
+frequency is 26.7kHz (PFS= “010”).
+
+Table 17 04h, 08h, 0Ch Auto Breath Control
+Register 3 of ABM-x
+Bit
+
+D7:D6
+
+D5:D4
+
+D3:D0
+
+Name
+
+LE
+
+LB
+
+LTA
+
+Default
+
+00
+
+00
+
+0000
+
+For example, if LTA=2, LTB=100, the total loop times
+is 256×2+100= 612 times.
+For the counting of breathing times, do follow Figure
+16 to enable the Auto Breath Mode.
+If the loop starts from T4,
+T4->T1->T2->T3(1)->T4->T1->T2->T3(2)->T4->T1>... and so on.
+If the loop not start from T4,
+Tx->T3(1) ->T4->T1->T2->T3(2)->T4-> T1->... and
+so on.
+If the loop ends at off state (End of T3), the LED will
+be off state at last. If the loop ends at on state (End
+of T1), the LED will run an extra T4&T1, which are
+not included in loop.
+LB
+00
+01
+10
+11
+
+Loop Beginning Time
+Loop begin from T1
+Loop begin from T2
+Loop begin from T3
+Loop begin from T4
+
+LE
+00
+01
+
+Loop End Time
+Loop end at off state (End of T3)
+Loop end at on state (End of T1)
+
+LTA
+0000
+0001
+0010
+…
+1111
+
+8-11 Bits Of Loop Times
+Endless loop
+1
+2
+…
+15
+
+Figure 11 Auto Breathing Function
+
+Table 18 05h, 09h, 0Dh Auto Breath Control
+Register 4 of ABM-x
+Bit
+
+D7:D0
+
+Name
+
+LTB
+
+Default
+
+0000 0000
+
+Total loop times= LTA ×256 + LTB.
+For example, if LTA=2, LTB=100, the total loop times
+is 256×2+100= 612 times.
+
+Total loop times= LTA ×256 + LTB.
+Lumissil Microsystems – www.lumissil.com
+Rev. E, 10/29/2024
+
+20
+
+IS31FL3733B
+LTB
+0000 0000
+0000 0001
+0000 0010
+…
+1111 1111
+
+Table 20 10h CSx Pull-Down Resistor Selection
+Register
+
+0-7 Bits Of Loop Times
+Endless loop
+1
+2
+…
+255
+
+Bit
+
+D7:D3
+
+D2:D0
+
+Name
+
+-
+
+PDR
+
+Default
+
+00000
+
+000
+
+Set the pull-down resistor for CSx.
+
+0Eh Time Update Register (02h~0Dh)
+The data sent to the time registers (02h~0Dh) will be
+stored in temporary registers. A write operation of
+“0000 0000” data to the Time Update Register is
+required to update the registers (02h~0Dh). Please
+follow Figure 16 to enable the Auto Breath mode and
+update the time parameters.
+Table 19 0Fh SWy Pull-Up Resistor Selection
+Register
+Bit
+
+D7:D3
+
+D2:D0
+
+Name
+
+-
+
+PUR
+
+Default
+
+00000
+
+000
+
+Set pull-up resistor for SWy.
+
+PUR
+
+SWy Pull‐up Resistor Selection Bit
+
+000
+001
+010
+011
+100
+101
+110
+111
+
+No pull-up resistor
+0.5kΩ pull-up in tNOL
+0.5kΩ pull-up in tNOL
+3.0kΩ pull-up all the time
+4.0kΩ pull-up all the time
+8.0kΩ pull-up all the time
+16kΩ pull-up all the time
+32kΩ pull-up in tNOL
+
+Lumissil Microsystems – www.lumissil.com
+Rev. E, 10/29/2024
+
+PDR
+000
+001
+010
+011
+100
+101
+110
+111
+
+CSx Pull-down Resistor Selection Bit
+No pull-down resistor
+0.5kΩ pull-down in tNOL
+0.5kΩ pull-down in tNOL
+3.0kΩ pull-down all the time
+68kΩ pull-down all the time
+8.0kΩ pull-down all the time
+16kΩ pull-down all the time
+32kΩ pull-down in tNOL
+
+11h Reset Register
+Once user read the Reset Register, IS31FL3733B
+will reset all the IS31FL3733B registers to their
+default value. On initial power-up, the IS31FL3733B
+registers are reset to their default values for a blank
+display.
+
+21
+
+IS31FL3733B
+APPLICATION INFORMATION
+
+SW1
+SW2
+SW3
+SW4
+SW5
+SW6
+SW7
+SW8
+SW9
+SW10
+SW11
+SW12
+CS1
+
+CS16
+
+00h
+
+10h
+
+20h
+
+30h
+
+40h
+
+50h
+
+60h
+
+70h
+
+80h
+
+90h
+
+A0h
+
+B0h
+
+00h
+
+0Fh
+
+1Fh
+
+2Fh
+
+3Fh
+
+4Fh
+
+5Fh
+
+6Fh
+
+7Fh
+
+8Fh
+
+9Fh
+
+AFh
+
+BFh
+
+0Fh
+
+tSCAN=110µs
+tNOL =6.875µs
+
+Scanning cycle T=1.4ms((110µs+6.875µs)×12)
+De-Ghost time
+PWM Duty is variable from 0/256~255/256
+
+IOUT=840/RISE T×GCC/256
+(GCC=0~255)
+
+Figure 12 Scanning Timing (PFS=”000”)
+
+SCANING TIMING
+
+PWM CONTROL
+
+As shown in Figure 12, the SW1~SW12 is turned on
+by serial, LED is driven 16 by 16 within the SWy
+(x=1~12) on time (SWy, y=1~12) is sink and pull low
+when LED on), including the non-overlap blanking time
+during scan, the duty cycle of SWy (active low, y=1~12)
+is (PFS= “000”):
+
+After setting the IOUT and GCC, the brightness of each
+LEDs (LED average current (ILED)) can be modulated
+with 256 steps by PWM Register, as described in
+Formula (1).
+
+Duty 
+
+110s
+1
+1
+ 
+110s  6.875s 12 12.75
+
+(2)
+
+Where 110μs is tSCAN, the period of scanning and 8μs
+is tNOL, the non-overlap time.
+When PFS= “010” or others, the duty result is same.
+EXTERNAL RESISTOR (RISET)
+The output current for each CSx can be set by a single
+external resistor, RISET, as described in Formula (3).
+
+IOUT 
+
+840 GCC
+
+RISET 256
+
+(3)
+
+GCC is Global Current Control Register (PG3, 01h)
+data showing in Table 14.
+
+Lumissil Microsystems – www.lumissil.com
+Rev. E, 10/29/2024
+
+I LED 
+
+PWM
+ I OUT  Duty
+256
+
+(1)
+
+Where PWM is PWM Registers (PG1, 00h~BFh) data
+showing in Table 10.
+For example, in Figure 1, RISET=20kΩ, if PWM=255,
+and GCC=255, then
+
+I LED 
+
+255
+840
+255
+1
+
+
+
+ 3 .27 mA
+256 20 k  256 12 .75
+
+Writing new data continuously to the registers can
+modulate the brightness of the LEDs to achieve a
+breathing effect.
+LED AVERAGE CURRENT (ILED)
+As described in Formula (1), the LED average current
+(ILED) is effected by 3 factors:
+1. RISET, resistor which is connected ISET pin and
+GND. RISET sets the current of all CSx (x=1~16) based
+on Formula (3).
+22
+
+IS31FL3733B
+2. Global Current Control Register (PG3, 01h). This
+register adjusts all CSx (x=1~16) output currents by
+256 steps as shown in Formula (3).
+3. PWM Registers (PG1, 00h~BFh), every LED has an
+own PWM register. PWM Registers adjust individual
+LED average current by 256 steps as shown in
+Formula (1).
+
+64 gamma steps. The user must decide the final
+number of gamma steps not only by the LED itself,
+but also based on the visual performance of the
+finished product.
+Table 22 64 Gamma Steps with 256 PWM Steps
+C(0)
+
+C(1)
+
+C(2)
+
+C(3)
+
+C(4)
+
+C(5)
+
+C(6)
+
+C(7)
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+0
+
+1
+
+GAMMA CORRECTION
+
+C(8)
+
+C(9)
+
+C(10) C(11) C(12) C(13) C(14)
+
+C(15)
+
+In order to perform a better visual LED breathing effect
+we recommend using a gamma corrected PWM value
+to set the LED intensity. This results in a reduced
+number of steps for the LED intensity setting, but
+causes the change in intensity to appear more linear to
+the human eye.
+
+8
+
+10
+
+12
+
+20
+
+22
+
+C(16) C(17) C(18) C(19) C(20) C(21) C(22)
+
+C(23)
+
+24
+
+41
+
+44
+
+C(24) C(25) C(26) C(27) C(28) C(29) C(30)
+
+C(31)
+
+47
+
+69
+
+73
+
+C(32) C(33) C(34) C(35) C(36) C(37) C(38)
+
+C(39)
+
+77
+
+104
+
+109
+
+C(40) C(41) C(42) C(43) C(44) C(45) C(46)
+
+C(47)
+
+114
+
+146
+
+152
+
+C(48) C(49) C(50) C(51) C(52) C(53) C(54)
+
+C(55)
+
+158
+
+195
+
+202
+
+C(56) C(57) C(58) C(59) C(60) C(61) C(62)
+
+C(63)
+
+209
+
+255
+
+Gamma correction, also known as gamma
+compression or encoding, is used to encode linear
+luminance to match the non-linear characteristics of
+display. Since the IS31FL3733B can modulate the
+brightness of the LEDs with 256 steps, a gamma
+correction function can be applied when computing
+each subsequent LED intensity setting such that the
+changes in brightness matches the human eye’s
+brightness curve.
+Table 21 32 Gamma Steps with 256 PWM Steps
+C(1)
+
+C(2)
+
+C(3)
+
+C(4)
+
+C(5)
+
+C(6)
+
+C(7)
+
+0
+
+1
+
+2
+
+4
+
+6
+
+10
+
+13
+
+18
+
+C(8)
+
+C(9)
+
+C(10) C(11) C(12) C(13) C(14)
+
+22
+
+28
+
+33
+
+53
+
+61
+
+50
+81
+
+69
+
+C(24) C(25) C(26) C(27) C(28) C(29) C(30)
+
+C(31)
+
+96
+
+10
+
+255
+
+64
+
+161
+
+173
+
+186
+
+199
+
+212
+
+226
+
+256
+
+89
+
+94
+
+129
+176
+
+134
+182
+
+65
+99
+140
+188
+
+223
+
+230
+
+237
+
+244
+
+16
+
+24
+
+32
+
+40
+
+251
+
+128
+
+0
+0
+
+192
+
+PWM Data
+
+61
+
+32
+
+224
+
+8
+
+48
+
+56
+
+64
+
+Intensity Steps
+
+160
+
+Figure 14 Gamma Correction (64 Steps)
+
+128
+
+Note: The data of 32 gamma steps is the standard value and the
+data of 64 gamma steps is the recommended value.
+
+96
+
+OPERATING MODE
+
+64
+
+Each dot of IS31FL3733B has two selectable
+operating modes, PWM Mode and Auto Breath Mode.
+
+32
+0
+
+57
+
+38
+
+160
+
+149
+
+126
+
+35
+
+192
+
+C(15)
+
+138
+
+116
+
+170
+
+216
+
+78
+
+106
+
+124
+
+164
+
+C(23)
+
+96
+
+85
+
+119
+
+C(16) C(17) C(18) C(19) C(20) C(21) C(22)
+86
+
+53
+
+32
+
+18
+
+224
+
+PWM Data
+
+46
+
+29
+
+16
+
+256
+
+C(0)
+
+39
+
+26
+
+14
+
+0
+
+4
+
+8
+
+12
+
+16
+
+20
+
+24
+
+28
+
+32
+
+Intensity Steps
+Figure 13 Gamma Correction (32 Steps)
+
+Choosing more gamma steps provides for a more
+continuous looking breathing effect. This is useful for
+very long breathing cycles. The recommended
+configuration is defined by the breath cycle T. When
+T=1s, choose 32 gamma steps, when T=2s, choose
+Lumissil Microsystems – www.lumissil.com
+Rev. E, 10/29/2024
+
+PWM Mode
+By setting the Auto Breath Mode Register bits of the
+Page 2 (PG2, 00h~BFh) to “00”, or disable the B_EN
+bit of Configure Register (PG3, 00h), the
+IS31FL3733B operates in PWM Mode. The brightness
+of each LED can be modulated with 256 steps by
+PWM registers. For example, if the data in PWM
+Register is “0000 0100”, then the PWM is the fourth
+step.
+23
+
+IS31FL3733B
+Writing new data continuously to the registers can
+modulate the brightness of the LEDs to achieve a
+breathing effect.
+Auto Breath Mode
+By setting the B_EN bit of the Configuration Register
+(PG3, 00h) to “1”, breath function enables. When set
+the B_EN bit to “0”, breath function disables.
+By setting the Auto Breath Mode Register bits of the
+Page 2 (PG2, 00h~BFh) to “01” (ABM-1), “10” (ABM-2)
+or “11” (ABM-3), the IS31FL3733B operates in Auto
+Breath Mode.
+IS31FL3733B has three auto breath modes, Auto
+Breath Mode 1, Auto Breath Mode 2 and Auto Breath
+Mode 3. Each ABM has T1, T2, T3 and T4, as shown
+below:
+
+OPEN/SHORT DETECT FUNCTION
+IS31FL3733B has open and short detect bit for each
+LED.
+By setting the OSD bit of the Configuration Register
+(PG3, 00h) from “0” to “1”, the LED Open Register
+and LED Short Register will start to store the
+open/short information and after at least 2 scanning
+cycle (3.264ms) the MCU can get the open/short
+information by reading the 18h~2fh/30h~47h, for
+those dots are turned off via LED On/Off Registers
+(PG0, 00h~17h), the open/short data will not get
+refreshed when setting the OSD bit of the
+Configuration Register (PG3, 00h) from “0” to “1”.
+The Global Current Control Register (PG3, 01h) need
+to set to 0x01 in order to get the right open/short data.
+The detect action is one-off event and each time
+before reading out the open/short information, the
+OSD bit of the Configuration Register (PG3, 00h)
+need to be set from “0” to “1” (clear before set
+operation).
+INTERRUPT CONTROL
+
+Figure 15 Auto Breathing Function
+
+T1/T3 is variable from 0.21s to 26.88s, T2/T4 is
+variable from 0s to 26.88s, for each loop, the start
+point can be T1~T4 and the stop point can be on state
+(T2) and off state (T4), also the loop time can be set to
+1~212 times or endless. Each LED can select ABM1~ABM-3 to work.
+The setting of ABM-1~ABM-3 (PG2, 02h~0Dh) need to
+write the 0Eh in PG3 to update before effective.
+
+IS31FL3733B has an INTB pin, by setting the
+Interrupt Mask Register (F0h), it can be the flag of
+LED open, LED short or the finish flag of ABM-1,
+ABM-2, and ABM-3.
+For example, if the IO bit of the Interrupt Mask
+Register (F0h) set to “1”, when LED open happens,
+the INTB will pull be pulled low and the OB bit of
+Interrupt Status Register (F1h) will store open status
+at the same time.
+The INTB pin will be pulled high after reading the
+Interrupt Status Register (F1h) operation or it will be
+pulled high automatically after it stays low for 8ms
+(Typ.) if the IAC bit of Interrupt Mask Register (F0h) is
+set to “1”. The bits of Interrupt Status Register (F1h)
+will be reset to “0” after INTB pin pulled high.
+SYNCHRONIZE FUNCTION
+
+Figure 16 Enable Auto Breath Mode
+
+If not follow this flow, first loop’s start point may be
+wrong.
+
+Lumissil Microsystems – www.lumissil.com
+Rev. E, 10/29/2024
+
+SYNC bits of the Configuration Register (PG3, 00h)
+sets SYNC pin input or output synchronize clock
+signal. It is used for more than one part working
+synchronize. When SYNC bits are set to “01”, SYNC
+pin output synchronize clock to synchronize other
+parts as master. When SYNC bits are set to “10”,
+SYNC pin input synchronize clock and work
+synchronization with this input signal as slave. When
+SYNC bits are set to “00/11”, SYNC pin is high
+impedance, and synchronize function is disabled.
+SYNC bit default state is “00” and SYNC pin is high
+impedance when power up.
+DE-GHOST FUNCTION
+The “ghost” term is used to describe the behavior of
+an LED that should be OFF but instead glows dimly
+when another LED is turned ON. A ghosting effect
+typically can occur when multiplexing LEDs. In matrix
+24
+
+IS31FL3733B
+architecture any parasitic capacitance found in the
+constant-current outputs or the PCB traces to the
+LEDs may provide sufficient current to dimly light an
+LED to create a ghosting effect.
+
+P3733B=IPVCC×PVCC+ IQ×DVCC(AVCC) – IPVCC×VF(AVR) (4)
+
+To prevent this LED ghost effect, the IS31FL3733B
+has integrated pull-up resistors for each SWy (y=1~12)
+and pull-down resistors for each CSx (x=1~16). Select
+the right SWy pull-up resistor (PG3, 0Fh) and CSx
+pull-down resistor (PG3, 10h) which eliminates the
+ghost LED for a particular matrix layout configuration.
+
+Where IPVCC is the current of PVCC and VF(AVR) is the
+average forward of all the LED.
+
+Typically, selecting the 32kΩ will be sufficient to
+eliminate the LED ghost phenomenon.
+
+P3733B=632.5mA×(5V-3.5V)= 0.948.75W
+
+The SWy pull-up resistors and CSx pull-down resistors
+are active only when the CSx/SWy outputs are in the
+OFF state and therefore no power is lost through these
+resistors
+I2C RESET
+
+≈IPVCC×PVCC – IPVCC×VF(AVR)
+≈IPVCC×(PVCC – VF(AVR))
+
+For example, if RISET=20kΩ, GCC=255, PWM=255,
+PVCC=5V, VF(AVR)=3.5V@42mA,
+then the IPVCC=42mA×16×12/12.75=632.5mA.
+When operating the chip at high ambient
+temperatures, or when driving maximum load current,
+care must be taken to avoid exceeding the package
+power dissipation limits. The maximum power
+dissipation can be calculated using the following
+Equation (5):
+
+The I2C will be reset if the IICRST pin is pull-high,
+when normal operating the I2C bus, the IICRST pin
+need to keep low.
+
+PD ( MAX ) 
+PD ( MAX ) 
+
+SHUTDOWN MODE
+
+So,
+
+Shutdown mode can be used as a means of reducing
+power consumption. During shutdown mode all
+registers retain their data.
+
+And, PD ( MAX ) 
+
+By setting SSD bit of the Configuration Register (PG3,
+00h) to “0”, the IS31FL3733B will operate in software
+shutdown mode. When the IS31FL3733B is in
+software shutdown, all current sources are switched
+off, so that the matrix is blanked. All registers can be
+operated. Typical current consume is 3μA.
+Hardware Shutdown
+The chip enters hardware shutdown when the SDB pin
+is pulled low. All analog circuits are disabled during
+hardware shutdown, typical the current consume is
+3μA.
+The chip releases hardware shutdown when the SDB
+pin is pulled high. During hardware shutdown state
+Function Register can be operated.
+If VCC has risk drop below 1.75V but above 0.1V during
+SDB pulled low, please re-initialize all Function
+Registers before SDB pulled high.
+POWER DISSIPATION
+
+(5)
+
+ JA
+
+125C  25C
+ 2.56W (eTQFP )
+39C / W
+
+125C  25C
+ 2.67W (QFN )
+37.5C / W
+
+Figure 17 and 18, shows the power derating of the
+IS31FL3733B on a JEDEC boards (in accordance
+with JESD 51-5 and JESD 51-7) standing in still air.
+3
+eTQFP-48
+
+Power Dissipation (W)
+
+Software Shutdown
+
+125C  25C
+
+2.5
+
+2
+
+1.5
+
+1
+
+0.5
+0
+-40
+
+-25
+
+-10
+
+5
+
+20
+
+35
+
+50
+
+65
+
+80
+
+95
+
+110 125
+
+Temperature (°C)
+Figure 17 Dissipation Curve
+
+The power dissipation of the IS31FL3733B can
+calculate as below:
+
+Lumissil Microsystems – www.lumissil.com
+Rev. E, 10/29/2024
+
+25
+
+IS31FL3733B
+3
+
+PWM FREQUENCY SELECT
+The IS31FL3733B output channels operate with a
+default PWM frequency of 8.4kHz. Because all the
+CSx channels are synchronized, the DC supply will
+experience large instantaneous current surges when
+the CSx channels turn ON. These current surges will
+generate an AC ripple on the power supply which
+cause stress to the decoupling capacitors.
+
+2.5
+
+2
+
+1.5
+
+1
+
+0.5
+0
+-40
+
+-25
+
+-10
+
+5
+
+20
+
+35
+
+50
+
+65
+
+80
+
+95
+
+110 125
+
+Temperature (°C)
+Figure 18 Dissipation Curve
+
+LAYOUT
+As described in external resistor (RISET), the chip
+consumes lots of power. Please consider below factors
+when layout the PCB.
+1. The VCC (PVCC, DVCC, AVCC, VIO) capacitors
+need to close to the chip and the ground side should
+well connected to the GND of the chip.
+2. RISET should be close to the chip and the ground
+side should well connect to the GND of the chip.
+3. The thermal pad should connect to ground pins and
+the PCB should have the thermal pad too, usually this
+pad should have 16 or 25 via thru the PCB to other
+side’s ground area to help radiate the heat. About the
+thermal pad size, please refer to the land pattern of
+each package.
+4. The CSx pins maximum current is 42mA
+(RISET=20kΩ), and the SWy pins maximum current is
+672mA (RISET=20kΩ), the width of the trace, SWy
+should have wider trace then CSx.
+5. In the middle of SDA and SCL trace, a ground line is
+recommended to avoid the effect between these two
+lines.
+
+Lumissil Microsystems – www.lumissil.com
+Rev. E, 10/29/2024
+
+When the AC ripple is applied to a monolithic ceramic
+capacitor chip (MLCC) it will expand and contract
+causing the PCB to flex and generate audible hum in
+the range of between 20Hz to 20kHz, to avoid this
+hum, there are many countermeasures, such as
+selecting the capacitor type and value which will not
+cause the PCB to flex and contract.
+An additional option for avoiding audible hum is to set
+the IS31FL3733B’s output PWM frequency above the
+audible range. The Output Frequency Setting Register
+(00h)’s bit D4 can be used to set the switching
+frequency to 26.7kHz, which is beyond the audible
+range. Figure 19 below shows the variation of output
+PWM frequency across supply voltage and
+temperature.
+35
+
+Output PWM Frequency (kHz)
+
+Power Dissipation (W)
+
+QFN-48
+
+30
+
+85°C
+
+25
+
+25°C
+
+20
+
+-40°C
+
+15
+
+10
+5
+2.7
+
+3.1
+
+3.5
+
+3.9
+
+4.3
+
+4.7
+
+5.1
+
+5.5
+
+VCC (V)
+Figure 19 VCC vs. CSx PWM Frequency
+
+26
+
+IS31FL3733B
+CLASSIFICATION REFLOW PROFILES
+Profile Feature
+
+Pb-Free Assembly
+
+Preheat & Soak
+Temperature min (Tsmin)
+Temperature max (Tsmax)
+Time (Tsmin to Tsmax) (ts)
+
+150°C
+200°C
+60-120 seconds
+
+Average ramp-up rate (Tsmax to Tp)
+
+3°C/second max.
+
+Liquidous temperature (TL)
+Time at liquidous (tL)
+
+217°C
+60-150 seconds
+
+Peak package body temperature (Tp)*
+
+Max 260°C
+
+Time (tp)** within 5°C of the specified
+classification temperature (Tc)
+
+Max 30 seconds
+
+Average ramp-down rate (Tp to Tsmax)
+
+6°C/second max.
+
+Time 25°C to peak temperature
+
+8 minutes max.
+
+Figure 20 Classification Profile
+
+Lumissil Microsystems – www.lumissil.com
+Rev. E, 10/29/2024
+
+27
+
+IS31FL3733B
+PACKAGE INFORMATION
+QFN-48
+
+Lumissil Microsystems – www.lumissil.com
+Rev. E, 10/29/2024
+
+28
+
+IS31FL3733B
+eTQFP-48
+
+Lumissil Microsystems – www.lumissil.com
+Rev. E, 10/29/2024
+
+29
+
+IS31FL3733B
+RECOMMENDED LAND PATTERN
+QFN-48
+
+eTQFP-48
+
+Note:
+1. Land pattern complies to IPC-7351.
+2. All dimensions in MM.
+3. This document (including dimensions, notes & specs) is a recommendation based on typical circuit board manufacturing parameters. Since
+land pattern design depends on many factors unknown (eg. User’s board manufacturing specs), user must determine suitability for use.
+
+Lumissil Microsystems – www.lumissil.com
+Rev. E, 10/29/2024
+
+30
+
+IS31FL3733B
+REVISION HISTORY
+Revision
+
+Detail Information
+
+Date
+
+00A
+
+Initial release
+
+2019.07.11
+
+0A
+
+Update PWM Frequency Setting
+
+2019.09.03
+
+A
+
+Release to mass production
+
+2019.11.06
+
+B
+
+Add 2500/reel for eTQFP package
+
+2020.07.23
+
+C
+
+Correct PUR bit’s mistake
+
+2020.10.19
+
+D
+
+1. Add note for T4 setting
+2. Update POD and LP
+
+2021.11.03
+
+E
+
+1. Update to new Lumissil logo and add RoHS
+2. Add “open drain” for INTB pin description
+
+2024.10.29
+
+Lumissil Microsystems – www.lumissil.com
+Rev. E, 10/29/2024
+
+31
+
+
